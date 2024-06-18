@@ -13,7 +13,6 @@ import { applyFilter } from "@/utils/filterHandler";
 const include = { channel: true, type: true, category: true };
 
 const createProgram = async (data) => {
-
   return await createRecord("program", data);
 };
 
@@ -37,6 +36,7 @@ const fetchPrograms = async ({
   start = "0",
   size = "10",
   filters = "[]",
+  filtersFn = "[]",
   globalFilter = "",
   sorting = "[]",
 }) => {
@@ -56,10 +56,19 @@ const fetchPrograms = async ({
     ];
   }
 
-  // Apply column filters
-  if (filters) {
+  // Merge filterFns into filters based on their id
+  let mergedFilters = [];
+  if (filters && filtersFn) {
     const parsedFilters = JSON.parse(filters);
-    parsedFilters.forEach((filter) => {
+    const parsedFilterFns = JSON.parse(filtersFn);
+    mergedFilters = parsedFilters.map((filter) => {
+      return { ...filter, type: parsedFilterFns[filter.id] };
+    });
+  }
+
+  // Apply column filters
+  if (mergedFilters.length > 0) {
+    mergedFilters.forEach((filter) => {
       applyFilter(filter, where);
     });
   }

@@ -99,7 +99,7 @@ const ProgramManagement = () => {
         start: `${pagination.pageIndex}`,
         size: `${pagination.pageSize}`,
         filters: JSON.stringify(columnFilters ?? []),
-        // filtersFn: JSON.stringify(columnFilterFns ?? []),
+        filtersFn: JSON.stringify(columnFilterFns ?? []),
         globalFilter: globalFilter ?? "",
         sorting: JSON.stringify(sorting ?? []),
       };
@@ -127,7 +127,7 @@ const ProgramManagement = () => {
 
   const channelsData = async () => {
     try {
-      const records  = await allChannels();
+      const records = await allChannels();
       console.log(records);
       setChannels(records);
       console.log("first");
@@ -203,10 +203,10 @@ const ProgramManagement = () => {
           videoUrl: newProgram.videoUrl,
           airDate: newProgram.airDate,
           isActive: newProgram.isActive,
-          channelId: newProgram.channelId, 
-          typeId: newProgram.typeId,       
-          categoryId: newProgram.categoryId 
-        }
+          channelId: newProgram.channelId,
+          typeId: newProgram.typeId,
+          categoryId: newProgram.categoryId,
+        };
         await updateProgram(editingProgram.id, data);
       } else {
         const endDate = new Date();
@@ -251,7 +251,6 @@ const ProgramManagement = () => {
         const column = columns.find(
           (col) => col.accessorKey === filter.id || col.id === filter.id
         );
-        const filterFn = columnFilterFns[filter.id];
 
         let filtervariant;
         if (["id"].includes(filter.id)) {
@@ -262,7 +261,6 @@ const ProgramManagement = () => {
 
         return {
           ...filter,
-          type: filterFn,
           ...(filtervariant && { filtervariant }),
           ...(column?.accessorFn && { filtervariant: filtervariant || "text" }),
         };

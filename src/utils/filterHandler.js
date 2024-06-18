@@ -5,7 +5,7 @@ const isValidStringValue = (value) =>
   value !== undefined && value !== null && value !== "";
 
 const applyFilter = (filter, where) => {
-  const { id, value, type, filtervariant } = filter;
+  const { id, value, filtervariant, type } = filter;
 
   // Skip filter if the value is null, undefined, or empty
   if (
@@ -93,7 +93,6 @@ const applyFilter = (filter, where) => {
       case "notEquals":
         nestedFilter[key] = { notIn: value };
         break;
-
 
       // case "contains":
       // case "fuzzy":
@@ -234,10 +233,10 @@ const applyFilter = (filter, where) => {
     }
   };
 
-
   const applyTimeFilter = (nestedFilter, key) => {
-    const isValidStringValue = (str) => typeof str === 'string' && str.trim() !== '';
-  
+    const isValidStringValue = (str) =>
+      typeof str === "string" && str.trim() !== "";
+
     switch (type) {
       case "equals":
         if (isValidStringValue(value)) {
@@ -287,13 +286,16 @@ const applyFilter = (filter, where) => {
           }
         }
         break;
-        case "between":
+      case "between":
         if (Array.isArray(value) && value.length === 2) {
-          const [startTime, endTime] = value.map(dateTimeString => {
+          const [startTime, endTime] = value.map((dateTimeString) => {
             const dateObject = new Date(dateTimeString);
-            return isValidStringValue(dateTimeString) && !isNaN(dateObject.getTime()) ? dateObject.toLocaleTimeString() : null;
+            return isValidStringValue(dateTimeString) &&
+              !isNaN(dateObject.getTime())
+              ? dateObject.toLocaleTimeString()
+              : null;
           });
-  
+
           if (startTime && endTime) {
             nestedFilter[key] = { gt: startTime, lt: endTime };
           }
@@ -301,14 +303,18 @@ const applyFilter = (filter, where) => {
         break;
       case "betweenInclusive":
         if (Array.isArray(value) && value.length === 2) {
-          const [startTime, endTime] = value.map(dateTimeString => {
+          const [startTime, endTime] = value.map((dateTimeString) => {
             const dateObject = new Date(dateTimeString);
-            return isValidStringValue(dateTimeString) && !isNaN(dateObject.getTime()) ? dateObject.toLocaleTimeString() : null;
+            return isValidStringValue(dateTimeString) &&
+              !isNaN(dateObject.getTime())
+              ? dateObject.toLocaleTimeString()
+              : null;
           });
-  
+
           if (startTime && endTime) {
             nestedFilter[key] = { gte: startTime, lte: endTime };
-          }}
+          }
+        }
       default:
         break;
     }
@@ -403,10 +409,4 @@ const applyFilter = (filter, where) => {
   }
 };
 
-export {
-  applyFilter,
-};
-
-
-
-
+export { applyFilter };

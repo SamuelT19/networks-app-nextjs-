@@ -12,7 +12,6 @@ import {
 import { applyFilter } from "@/utils/filterHandler";
 
 const createChannel = async (data) => {
-
   return await createRecord("channel", data);
 };
 
@@ -35,6 +34,7 @@ const fetchChannels = async ({
   start = "0",
   size = "10",
   filters = "[]",
+  filtersFn = "[]",
   globalFilter = "",
   sorting = "[]",
 }) => {
@@ -47,10 +47,19 @@ const fetchChannels = async ({
     where.OR = [{ name: { contains: globalFilter, mode: "insensitive" } }];
   }
 
-  // Apply column filters
-  if (filters) {
+  // Merge filterFns into filters based on their id
+  let mergedFilters = [];
+  if (filters && filtersFn) {
     const parsedFilters = JSON.parse(filters);
-    parsedFilters.forEach((filter) => {
+    const parsedFilterFns = JSON.parse(filtersFn);
+    mergedFilters = parsedFilters.map((filter) => {
+      return { ...filter, type: parsedFilterFns[filter.id] };
+    });
+  }
+
+  // Apply column filters
+  if (mergedFilters.length > 0) {
+    mergedFilters.forEach((filter) => {
       applyFilter(filter, where);
     });
   }

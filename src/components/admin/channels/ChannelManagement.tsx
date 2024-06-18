@@ -67,6 +67,7 @@ const ChannelManagement = () => {
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>(
     []
   );
+  console.log(columnFilters);
   const [columnFilterFns, setColumnFilterFns] =
     useState<MRT_ColumnFilterFnsState>({ id: "equals", name: "startsWith" });
   const [globalFilter, setGlobalFilter] = useState("");
@@ -75,7 +76,7 @@ const ChannelManagement = () => {
     pageIndex: 0,
     pageSize: 10,
   });
-console.log(columnFilterFns)
+  console.log(columnFilterFns);
   const channelsData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -108,7 +109,7 @@ console.log(columnFilterFns)
 
   useEffect(() => {
     channelsData();
-  }, [channelsData]);
+  }, [channelsData, columnFilterFns]);
 
   const handleOpen = (channel: Channel | null = null) => {
     setCurrentChannel(channel);
@@ -175,9 +176,6 @@ console.log(columnFilterFns)
         const column = columns.find(
           (col) => col.accessorKey === filter.id || col.id === filter.id
         );
-        const filterFn = columnFilterFns[filter.id];
-        console.log(filterFn)
-
         let filtervariant;
         if (["id"].includes(filter.id)) {
           filtervariant = "number";
@@ -187,13 +185,10 @@ console.log(columnFilterFns)
 
         return {
           ...filter,
-          value: columnFilterFns[filter.id] !== filterFn ? "" : filter.value,
-          type: filterFn,
           ...(filtervariant && { filtervariant }),
           ...(column?.accessorFn && { filtervariant: filtervariant || "text" }),
         };
       });
-
       setColumnFilters(updatedFilters);
     },
     [columnFilters, columnFilterFns]
