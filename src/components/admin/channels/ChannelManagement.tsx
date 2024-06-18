@@ -67,7 +67,6 @@ const ChannelManagement = () => {
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>(
     []
   );
-  console.log(columnFilters);
   const [columnFilterFns, setColumnFilterFns] =
     useState<MRT_ColumnFilterFnsState>({ id: "equals", name: "startsWith" });
   const [globalFilter, setGlobalFilter] = useState("");
@@ -76,7 +75,6 @@ const ChannelManagement = () => {
     pageIndex: 0,
     pageSize: 10,
   });
-  console.log(columnFilterFns);
   const channelsData = useCallback(async () => {
     setIsLoading(true);
     try {

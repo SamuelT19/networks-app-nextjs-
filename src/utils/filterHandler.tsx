@@ -1,13 +1,55 @@
-const isValidNumericValue = (value) =>
+type FilterType =
+  | "fuzzy"
+  | "contains"
+  | "startsWith"
+  | "endsWith"
+  | "equals"
+  | "notEquals"
+  | "between"
+  | "betweenInclusive"
+  | "greaterThan"
+  | "greaterThanOrEqualTo"
+  | "lessThan"
+  | "lessThanOrEqualTo"
+  | "empty"
+  | "notEmpty";
+
+type FilterVariant =
+  | "text"
+  | "autocomplete"
+  | "select"
+  | "number"
+  | "multi-select"
+  | "date"
+  | "datetime"
+  | "date-range"
+  | "datetime-range"
+  | "time"
+  | "time-range"
+  | "range"
+  | "range-slider"
+  | "checkbox";
+
+type Filter = {
+  id: string;
+  value: any;
+  filtervariant: FilterVariant;
+  type: FilterType;
+};
+
+type Where = {
+  [key: string]: any;
+};
+
+const isValidNumericValue = (value: any): boolean =>
   value !== undefined && value !== null && value !== "" && !isNaN(value);
 
-const isValidStringValue = (value) =>
+const isValidStringValue = (value: any): boolean =>
   value !== undefined && value !== null && value !== "";
 
-const applyFilter = (filter, where) => {
+const applyFilter = (filter: Filter, where: Where): void => {
   const { id, value, filtervariant, type } = filter;
 
-  // Skip filter if the value is null, undefined, or empty
   if (
     value === null ||
     value === undefined ||
@@ -16,8 +58,7 @@ const applyFilter = (filter, where) => {
   )
     return;
 
-  // Function to apply text filters
-  const applyTextFilter = (nestedFilter, key) => {
+  const applyTextFilter = (nestedFilter: Where, key: string) => {
     switch (type) {
       case "fuzzy":
       case "contains":
@@ -84,8 +125,7 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  // Function to handle multi-select filters
-  const applyMultiSelectFilter = (nestedFilter, key) => {
+  const applyMultiSelectFilter = (nestedFilter: Where, key: string) => {
     switch (type) {
       case "equals":
         nestedFilter[key] = { in: value };
@@ -93,46 +133,12 @@ const applyFilter = (filter, where) => {
       case "notEquals":
         nestedFilter[key] = { notIn: value };
         break;
-
-      // case "contains":
-      // case "fuzzy":
-      //   nestedFilter[key] = {
-      //     OR: value.filter(isValidStringValue).map((val) => ({
-      //       contains: val,
-      //       mode: "insensitive",
-      //     })),
-      //   };
-      //   break;
-      // case "startsWith":
-      //   nestedFilter[key] = {
-      //     OR: value.filter(isValidStringValue).map((val) => ({
-      //       startsWith: val,
-      //       mode: "insensitive",
-      //     })),
-      //   };
-      //   break;
-      // case "endsWith":
-      //   nestedFilter[key] = {
-      //     OR: value.filter(isValidStringValue).map((val) => ({
-      //       endsWith: val,
-      //       mode: "insensitive",
-      //     })),
-      //   };
-      //   break;
-      // case "empty":
-      //   nestedFilter[key] = { equals: null };
-      //   break;
-      // case "notEmpty":
-      //   nestedFilter[key] = { not: null };
-      //   break;
-
       default:
         break;
     }
   };
 
-  // Function to handle numeric filters
-  const applyNumericFilter = (nestedFilter, key) => {
+  const applyNumericFilter = (nestedFilter: Where, key: string) => {
     const numericValue = parseFloat(value);
     switch (type) {
       case "equals":
@@ -182,8 +188,7 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  // Function to handle date and datetime filters
-  const applyDateFilter = (nestedFilter, key) => {
+  const applyDateFilter = (nestedFilter: Where, key: string) => {
     if (Array.isArray(value)) {
       switch (type) {
         case "between":
@@ -196,7 +201,10 @@ const applyFilter = (filter, where) => {
           const [startDateInclusive, endDateInclusive] = value.map(
             (v) => new Date(v)
           );
-          if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+          if (
+            !isNaN(startDateInclusive.getTime()) &&
+            !isNaN(endDateInclusive.getTime())
+          ) {
             nestedFilter[key] = {
               gte: startDateInclusive,
               lte: endDateInclusive,
@@ -233,8 +241,8 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  const applyTimeFilter = (nestedFilter, key) => {
-    const isValidStringValue = (str) =>
+  const applyTimeFilter = (nestedFilter: Where, key: string) => {
+    const isValidStringValue = (str: any): boolean =>
       typeof str === "string" && str.trim() !== "";
 
     switch (type) {
@@ -315,13 +323,13 @@ const applyFilter = (filter, where) => {
             nestedFilter[key] = { gte: startTime, lte: endTime };
           }
         }
+        break;
       default:
         break;
     }
   };
 
-  // Function to handle range filters
-  const applyRangeFilter = (nestedFilter, key) => {
+  const applyRangeFilter = (nestedFilter: Where, key: string) => {
     switch (type) {
       case "between":
         if (Array.isArray(value) && value.length === 2) {
@@ -344,8 +352,7 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  // Function to handle boolean filters
-  const applyBooleanFilter = (nestedFilter, key) => {
+  const applyBooleanFilter = (nestedFilter: Where, key: string) => {
     let booleanValue;
     if (value === "false") {
       booleanValue = false;
@@ -357,8 +364,7 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  // Function to apply the filter based on the filtervariant
-  const applyFilterByVariant = (nestedFilter, key) => {
+  const applyFilterByVariant = (nestedFilter: Where, key: string) => {
     switch (filtervariant) {
       case "text":
       case "autocomplete":
@@ -373,8 +379,6 @@ const applyFilter = (filter, where) => {
         break;
       case "date":
       case "datetime":
-        applyDateFilter(nestedFilter, key);
-        break;
       case "date-range":
       case "datetime-range":
         applyDateFilter(nestedFilter, key);
@@ -395,7 +399,6 @@ const applyFilter = (filter, where) => {
     }
   };
 
-  // Apply the filter to nested or non-nested properties
   const match = id.match(/^([a-z]+)_([a-z]+)$/);
   if (match) {
     const parent = match[1];

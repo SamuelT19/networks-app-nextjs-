@@ -1,6 +1,6 @@
 "use client";
 
-import { allPrograms, fetchPrograms } from "@/server-actions/programActions";
+import { allPrograms } from "@/server-actions/programActions";
 // import { useSocket } from "@/utils/socketUtils";
 import { Box, Card, CardContent, Typography } from "@mui/material";
 import React, { useEffect, useState } from "react";

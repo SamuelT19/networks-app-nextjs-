@@ -128,9 +128,7 @@ const ProgramManagement = () => {
   const channelsData = async () => {
     try {
       const records = await allChannels();
-      console.log(records);
       setChannels(records);
-      console.log("first");
     } catch (error) {
       console.error("Error fetching channels:", error);
     }

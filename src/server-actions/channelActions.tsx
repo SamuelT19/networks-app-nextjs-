@@ -11,17 +11,35 @@ import {
 
 import { applyFilter } from "@/utils/filterHandler";
 
-const createChannel = async (data) => {
+// Define types for the channel data
+type ChannelData = {
+  id?: number;
+  name?: string;
+  isActive?: boolean;
+};
+
+// Define types for the fetchChannels parameters
+type FetchChannelsParams = {
+  start?: string;
+  size?: string;
+  filters?: string;
+  filtersFn?: string;
+  globalFilter?: string;
+  sorting?: string;
+};
+
+const createChannel = async (data: ChannelData) => {
   return await createRecord("channel", data);
 };
 
-const updateChannel = async (id, data) => {
+const updateChannel = async (id: number, data: ChannelData) => {
   return await updateRecord("channel", id, data);
 };
 
-const deleteChannel = async (id) => {
+const deleteChannel = async (id: number) => {
   return await deleteRecord("channel", id);
 };
+
 const countChannels = async () => {
   return await countRecord("channel");
 };
@@ -37,10 +55,10 @@ const fetchChannels = async ({
   filtersFn = "[]",
   globalFilter = "",
   sorting = "[]",
-}) => {
+}: FetchChannelsParams) => {
   const pageIndex = parseInt(start, 10) || 0;
   const pageSize = parseInt(size, 10) || 10;
-  let where = {};
+  let where: Record<string, any> = {};
 
   // Apply global filter
   if (globalFilter) {
@@ -48,11 +66,11 @@ const fetchChannels = async ({
   }
 
   // Merge filterFns into filters based on their id
-  let mergedFilters = [];
+  let mergedFilters: any[] = [];
   if (filters && filtersFn) {
     const parsedFilters = JSON.parse(filters);
     const parsedFilterFns = JSON.parse(filtersFn);
-    mergedFilters = parsedFilters.map((filter) => {
+    mergedFilters = parsedFilters.map((filter: any) => {
       return { ...filter, type: parsedFilterFns[filter.id] };
     });
   }
@@ -65,13 +83,14 @@ const fetchChannels = async ({
   }
 
   // Apply sorting
-  let orderBy = [];
+  let orderBy: any[] = [];
   if (sorting) {
     const parsedSorting = JSON.parse(sorting);
-    orderBy = parsedSorting.map((sort) => ({
+    orderBy = parsedSorting.map((sort: any) => ({
       [sort.id]: sort.desc ? "desc" : "asc",
     }));
   }
+
   return await fetchRecords("channel", where, orderBy, {
     skip: pageIndex * pageSize,
     take: pageSize,

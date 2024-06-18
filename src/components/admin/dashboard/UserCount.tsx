@@ -11,9 +11,13 @@ const UserCount: React.FC = () => {
 
   const fetchUserCount = async () => {
     try {
-      const {count } = await usersCount();
-      let counted = count !== undefined ? count : 0;
-      setUserCount(counted);
+      const result = await usersCount();
+      
+      if ('count' in result) {
+        setUserCount(result.count); // TypeScript knows result is { count: number }
+      } else {
+        console.error("Error fetching user count:", result.error); // TypeScript knows result is { error: string }
+      }
     } catch (error) {
       console.error("Error fetching user count:", error);
     }
