@@ -1,4 +1,6 @@
 :root {
+  padding: 0;
+  margin: 0;
   --max-width: 1100px;
   --border-radius: 12px;
   --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
@@ -38,6 +40,8 @@
   --callout-border-rgb: 172, 175, 176;
   --card-rgb: 180, 185, 188;
   --card-border-rgb: 131, 134, 135;
+  background-color: "#121f4d",
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -87,12 +91,7 @@ body {
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+ 
 }
 
 a {
@@ -104,4 +103,21 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+.css-twia2z-MuiPaper-root-MuiDialog-paper{
+  max-width: 600px;
+}
+
+.MuiBox-root .css-1yyxjir{
+  margin-top: 80px;
+}
+
+.MuiLinearProgress-bar{
+  background-color: white;
+}
+
+.movie_card_icons svg{
+  width: 1.7em;
+  height: 1.7em;
 }
