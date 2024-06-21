@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const types = [
@@ -16,6 +16,13 @@ const categories = [
   { id: 5, name: 'Watch Later' },
 ];
 
+const roles = [
+  {id:1, name:"Admin"},
+  {id:2, name:"Editor"},
+  {id:3, name:"Contributor"},
+  {id:4, name:"Viewer"},
+]
+
 async function main() {
   console.log('Seeding types...');
   for (const type of types) {
@@ -32,6 +39,15 @@ async function main() {
       where: { id: category.id },
       update: {},
       create: category,
+    });
+  }
+
+  console.log('Seeding roles...');
+  for (const role of roles) {
+    await prisma.role.upsert({
+      where: { id: role.id },
+      update: {},
+      create: role,
     });
   }
 }

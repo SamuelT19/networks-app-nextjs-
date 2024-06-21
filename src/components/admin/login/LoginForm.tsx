@@ -55,7 +55,6 @@ const LoginForm: React.FC = () => {
     console.log(password);
     try {
       const { success, user } = await loginUser({ username, password });
-      console.log(user);
       if (!success || !user) {
         setError("Invalid username or password");
         setTimeout(() => {
@@ -66,6 +65,7 @@ const LoginForm: React.FC = () => {
         dispatch({ type: "SET_USER", payload: user });
         router.push("/dashboard");
       }
+      console.log(user);
     } catch (error) {
       console.error("Login failed:", error);
       setError("An error occurred during login");

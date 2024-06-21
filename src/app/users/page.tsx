@@ -3,15 +3,14 @@
 import React from "react";
 import AdminNav from "@/components/admin/AdminNav";
 import AdminMenu from "@/components/admin/AdminMenu";
-import { Box, Container } from "@mui/material";
-import ChannelManagement from "@/components/admin/channels/ChannelManagement";
+import { Box } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useProgramsContext } from "@/context/ProgramsContext";
-const Channel: React.FC = () => {
+import UserManagement from "@/components/admin/user/UserManagment";
+const User: React.FC = () => {
   const { state } = useProgramsContext();
 
   const { user } = state;
-  console.log(user)
 
   const router = useRouter();
 
@@ -23,16 +22,16 @@ const Channel: React.FC = () => {
   return (
     <>
       <Box>
-        <AdminNav title="Channels" />
+        <AdminNav title="Users" />
       </Box>
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <ChannelManagement user={user}/>
+          <UserManagement />
         </Box>
       </Box>
     </>
   );
 };
 
-export default Channel;
+export default User;

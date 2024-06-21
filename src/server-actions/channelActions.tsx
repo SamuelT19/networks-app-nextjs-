@@ -16,6 +16,7 @@ type ChannelData = {
   id?: number;
   name?: string;
   isActive?: boolean;
+  userId?: number;
 };
 
 // Define types for the fetchChannels parameters

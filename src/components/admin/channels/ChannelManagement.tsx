@@ -39,20 +39,27 @@ import {
   deleteChannel,
   fetchChannels,
 } from "@/server-actions/channelActions";
+import { User } from "@prisma/client";
 
 const channelSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1).max(20),
   isActive: z.boolean().optional(),
+  userId: z.number().optional(),
 });
 
 type Channel = {
   id: number;
   name: string;
   isActive: boolean;
+  userId?: number;
 };
 
-const ChannelManagement = () => {
+interface ChannelManagementProps {
+  user: User;
+}
+
+const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   const [open, setOpen] = useState(false);
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
   const [formData, setFormData] = useState<Partial<Channel>>({});
@@ -75,6 +82,8 @@ const ChannelManagement = () => {
     pageIndex: 0,
     pageSize: 10,
   });
+  console.log(user);
+
   const channelsData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -130,16 +139,19 @@ const ChannelManagement = () => {
     setFormData({});
     setValidationError(null);
   };
-
+  console.log(formData);
   const handleSubmit = async () => {
     try {
+      const dataToSubmit = { ...formData, userId: user.id };
       channelSchema.parse(formData);
+      // setFormData();
 
       if (currentChannel) {
-        await updateChannel(currentChannel.id, formData);
+        await updateChannel(currentChannel.id, dataToSubmit);
         channelsData();
       } else {
-        await createChannel(formData);
+        console.log(formData);
+        await createChannel(dataToSubmit);
         channelsData();
       }
       handleClose();
