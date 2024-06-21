@@ -7,9 +7,15 @@ import LiveTvIcon from "@mui/icons-material/LiveTv";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import { Box, Button } from "@mui/material";
 import Link from "next/link";
+import { defineAbilitiesFor } from "@/lib/abilities";
+import { useProgramsContext } from "@/context/ProgramsContext";
 
 function AdminMenu() {
   const pathname = usePathname();
+  const { state } = useProgramsContext();
+
+  const { user } = state;
+  const ability = defineAbilitiesFor(user); 
 
   const buttonStyles = (path: string) => ({
     width: "100%",
@@ -35,7 +41,6 @@ function AdminMenu() {
           top: 50,
           left: 0,
           width: "15%",
-
           minHeight: "calc(100vh - 50px)",
           textAlign: "start",
           p: 0,
@@ -43,42 +48,50 @@ function AdminMenu() {
           zIndex: 10,
         }}
       >
-        <Link href="/dashboard" passHref>
-          <Button
-            variant="text"
-            startIcon={<DashboardIcon />}
-            sx={buttonStyles("/dashboard")}
-          >
-            Dashboard
-          </Button>
-        </Link>
-        <Link href="/channels" passHref>
-          <Button
-            variant="text"
-            startIcon={<LiveTvIcon />}
-            sx={buttonStyles("/channels")}
-          >
-            Channels
-          </Button>
-        </Link>
-        <Link href="/programs" passHref>
-          <Button
-            variant="text"
-            startIcon={<MovieFilterIcon />}
-            sx={buttonStyles("/programs")}
-          >
-            Programs
-          </Button>
-        </Link>
-        <Link href="/users" passHref>
-          <Button
-            variant="text"
-            startIcon={<MovieFilterIcon />}
-            sx={buttonStyles("/users")}
-          >
-            Users
-          </Button>
-        </Link>
+         
+          <Link href="/dashboard" passHref>
+            <Button
+              variant="text"
+              startIcon={<DashboardIcon />}
+              sx={buttonStyles("/dashboard")}
+            >
+              Dashboard
+            </Button>
+          </Link>
+        
+        {ability.can("read", "Channel") && (
+          <Link href="/channels" passHref>
+            <Button
+              variant="text"
+              startIcon={<LiveTvIcon />}
+              sx={buttonStyles("/channels")}
+            >
+              Channels
+            </Button>
+          </Link>
+        )}
+        
+          <Link href="/programs" passHref>
+            <Button
+              variant="text"
+              startIcon={<MovieFilterIcon />}
+              sx={buttonStyles("/programs")}
+            >
+              Programs
+            </Button>
+          </Link>
+        
+        {ability.can("read", "User") && (
+          <Link href="/users" passHref>
+            <Button
+              variant="text"
+              startIcon={<MovieFilterIcon />}
+              sx={buttonStyles("/users")}
+            >
+              Users
+            </Button>
+          </Link>
+        )}
       </Box>
     </Box>
   );

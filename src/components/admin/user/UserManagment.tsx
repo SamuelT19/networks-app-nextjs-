@@ -9,6 +9,7 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -34,6 +35,10 @@ import {
   getAllUsers,
 } from "@/server-actions/userActions";
 
+import { defineAbilitiesFor } from "@/lib/abilities";
+import { User } from "@prisma/client";
+import { UserWithRole } from "@/context/types";
+
 const userSchema = z.object({
   id: z.number().optional(),
   username: z.string().min(1).max(20),
@@ -42,20 +47,11 @@ const userSchema = z.object({
   roleId: z.number().min(1),
 });
 
-type User = {
-  id?: number;
-  username?: string;
-  email?: string;
-  password?: string;
-  roleId?: number;
-  role?: string;
-};
 
 interface Setter {
   id: number;
   name: string;
 }
-
 
 const idToRoleName: { [key: number]: string } = {
   1: "Admin",
@@ -63,10 +59,20 @@ const idToRoleName: { [key: number]: string } = {
   3: "Contributor",
   4: "Viewer",
 };
+interface UserManagementProps {
+  currentUser: UserWithRole;
+}
 
-const UserManagement = () => {
+const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
+  
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can('manage', 'all')) {
+    return <div>Access Denied</div>;
+  }
+
   const [open, setOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Setter[]>([]);
@@ -77,7 +83,7 @@ const UserManagement = () => {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getAllUsers();
+      const response = await getAllUsers(currentUser);
       if ('error' in response) {
         setIsError(true);
         console.error("Error fetching users:", response.error);
@@ -90,7 +96,7 @@ const UserManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchData();
@@ -106,7 +112,7 @@ const UserManagement = () => {
   }, []);
 
   const handleOpen = (user: User | null = null) => {
-    setCurrentUser(user);
+    setSelectedUser(user);
     setFormData(user ? { ...user } : {});
     setOpen(true);
   };
@@ -118,7 +124,7 @@ const UserManagement = () => {
 
   const handleClose = () => {
     setOpen(false);
-    setCurrentUser(null);
+    setSelectedUser(null);
     setFormData({});
     setValidationError(null);
   };
@@ -127,10 +133,10 @@ const UserManagement = () => {
     try {
       const parsedData = userSchema.parse(formData);
 
-      if (currentUser) {
-        await updateUser(parsedData, currentUser.id!);
+      if (selectedUser) {
+        await updateUser(currentUser, parsedData, selectedUser.id!);
       } else {
-        await createUser(parsedData);
+        await createUser(currentUser, parsedData);
       }
       fetchData();
       handleClose();
@@ -146,7 +152,7 @@ const UserManagement = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        await deleteUser(id);
+        await deleteUser(currentUser, id);
         fetchData();
       } catch (error) {
         console.error("Error deleting user:", error);
@@ -247,7 +253,7 @@ const UserManagement = () => {
         <MaterialReactTable table={table} />
 
         <Dialog open={open} onClose={handleClose} fullWidth>
-          <DialogTitle>{currentUser ? "Edit User" : "Add User"}</DialogTitle>
+          <DialogTitle>{selectedUser ? "Edit User" : "Add User"}</DialogTitle>
           <DialogContent>
             <TextField
               label="Username"
@@ -255,7 +261,6 @@ const UserManagement = () => {
               value={formData.username || ""}
               onChange={handleChange}
               fullWidth
-              required
             />
             <TextField
               label="Email"
@@ -263,16 +268,16 @@ const UserManagement = () => {
               value={formData.email || ""}
               onChange={handleChange}
               fullWidth
-              required
+              margin="normal"
             />
             <TextField
               label="Password"
               name="password"
-              type="text"
               value={formData.password || ""}
               onChange={handleChange}
               fullWidth
-              required={!currentUser}
+              margin="normal"
+              type="password"
             />
             <FormControl fullWidth margin="normal">
               <TextField
@@ -281,7 +286,6 @@ const UserManagement = () => {
                 name="roleId"
                 value={formData.roleId || ""}
                 onChange={handleChange}
-                fullWidth
               >
                 {roles.map((role) => (
                   <MenuItem key={role.id} value={role.id}>
@@ -291,13 +295,17 @@ const UserManagement = () => {
               </TextField>
             </FormControl>
             {validationError && (
-              <p style={{ color: "red" }}>{validationError}</p>
+              <Box mt={2}>
+                <Alert severity="error">{validationError}</Alert>
+              </Box>
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>
-              {currentUser ? "Update" : "Add"}
+            <Button onClick={handleClose} color="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} color="primary">
+              Save
             </Button>
           </DialogActions>
         </Dialog>
@@ -307,3 +315,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+

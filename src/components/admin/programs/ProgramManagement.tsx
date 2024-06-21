@@ -45,12 +45,21 @@ import {
 } from "@/server-actions/programActions";
 // import { useSocket, emitSocketEvent } from "@/utils/socketUtils";
 
+import { defineAbilitiesFor } from "@/lib/abilities";
+import { UserWithRole } from "@/context/types";
+
 interface Setter {
   id: number;
   name: string;
 }
 
-const ProgramManagement = () => {
+interface ProgramManagementProps {
+  user: UserWithRole;
+}
+
+const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
+  const ability = useMemo(() => defineAbilitiesFor(user), [user]);
+
   const [validationErrors, setValidationErrors] = useState<
     Record<string | number, string | number | undefined>
   >({});
@@ -103,7 +112,7 @@ const ProgramManagement = () => {
         globalFilter: globalFilter ?? "",
         sorting: JSON.stringify(sorting ?? []),
       };
-      const { records, totalRowCount } = await fetchPrograms(params);
+      const { records, totalRowCount } = await fetchPrograms(params, user);
       setPrograms(records);
       setRowCount(totalRowCount);
     } catch (error) {
@@ -174,7 +183,7 @@ const ProgramManagement = () => {
       [name]: name === "duration" ? Number(value) : value,
     });
   };
-
+console.log(user)
   const handleSelectChange = (event: SelectChangeEvent<number>) => {
     const { name, value } = event.target;
     setNewProgram({ ...newProgram, [name]: value });
@@ -205,14 +214,14 @@ const ProgramManagement = () => {
           typeId: newProgram.typeId,
           categoryId: newProgram.categoryId,
         };
-        await updateProgram(editingProgram.id, data);
+        await updateProgram(editingProgram.id, data, user);
       } else {
         const endDate = new Date();
         const randomDays = Math.floor(Math.random() * 30) + 1;
         const airDate = new Date(endDate);
         airDate.setDate(airDate.getDate() - randomDays);
 
-        await createProgram({ ...newProgram, airDate });
+        await createProgram({ ...newProgram, airDate }, user);
       }
       programsData();
       // emitSocketEvent("programsUpdated");
@@ -228,7 +237,7 @@ const ProgramManagement = () => {
   const handleDeleteProgram = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this program?")) {
       try {
-        await deleteProgram(id);
+        await deleteProgram(id,user);
         programsData();
         // socket.emit("programsUpdated");
       } catch (error) {

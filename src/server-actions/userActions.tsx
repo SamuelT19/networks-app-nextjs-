@@ -1,6 +1,8 @@
 "use server";
 
 import { PrismaClient, User } from "@prisma/client";
+import { defineAbilitiesFor } from "@/lib/abilities";
+import { UserWithRole } from "@/context/types";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +14,13 @@ type UserData = {
   roleId: number;
 };
 
-const updateUser = async (data: UserData, id: number) => {
+const updateUser = async (currentUser: UserWithRole, data: UserData, id: number) => {
+  const abilities = defineAbilitiesFor(currentUser);
+  
+  if (!abilities.can("update", "User")) {
+    return { error: "Access denied" };
+  }
+  
   try {
     const { username, email, password, roleId } = data;
     let updateData: any = {
@@ -24,7 +32,6 @@ const updateUser = async (data: UserData, id: number) => {
       updateData.password = password;
     }
 
-    // Ensure the role exists
     const role = await prisma.role.findUnique({
       where: { id: roleId },
     });
@@ -49,11 +56,16 @@ const updateUser = async (data: UserData, id: number) => {
   }
 };
 
-const createUser = async (data: UserData) => {
+const createUser = async (currentUser: UserWithRole, data: UserData) => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("create", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     const { username, email, password, roleId } = data;
 
-    // Ensure the role exists
     const role = await prisma.role.findUnique({
       where: { id: roleId },
     });
@@ -80,9 +92,13 @@ const createUser = async (data: UserData) => {
   }
 };
 
-const getAllUsers = async (): Promise<
-  { users: User[] } | { error: string }
-> => {
+const getAllUsers = async (currentUser: UserWithRole): Promise<{ users: User[] } | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("read", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     const users = await prisma.user.findMany({
       include: {
@@ -95,7 +111,13 @@ const getAllUsers = async (): Promise<
   }
 };
 
-const getUserById = async (id: number): Promise<User | { error: string }> => {
+const getUserById = async (currentUser: UserWithRole, id: number): Promise<User | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("read", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -114,7 +136,13 @@ const getUserById = async (id: number): Promise<User | { error: string }> => {
   }
 };
 
-const deleteUser = async (id: number): Promise<void | { error: string }> => {
+const deleteUser = async (currentUser: UserWithRole, id: number): Promise<void | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("delete", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     await prisma.user.delete({
       where: { id },
@@ -168,3 +196,4 @@ export {
   getUserById,
   usersCount,
 };
+

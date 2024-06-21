@@ -2,10 +2,20 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const createRecord = async (model, data, io, eventName) => {
+const getRecordById = async (id) => {
   try {
-    const recordData = { ...data, isActive: true};
-    const records = await prisma[model].create({ data: recordData });
+    const record = await prisma.channel.findUnique({ where: { id } });
+    return record;
+  } catch (error) {
+    console.error(`Error fetching record with ID ${id}:`, error);
+    throw new Error(error.message);
+  }
+};
+
+const createRecord = async (model,data, io, eventName) => {
+  try {
+    const recordData = { ...data, isActive: true };
+    const records = await prisma[model].create({data: recordData });
     if (io && eventName) {
       io.emit(eventName);
     }
@@ -16,10 +26,10 @@ const createRecord = async (model, data, io, eventName) => {
   }
 };
 
-const updateRecord = async (model, id, data, io, eventName) => {
+const updateRecord = async (model, where, data, io, eventName) => {
   try {
     const records = await prisma[model].update({
-      where: { id: parseInt(id) },
+      where,
       data,
     });
     if (io && eventName) {
@@ -32,11 +42,9 @@ const updateRecord = async (model, id, data, io, eventName) => {
   }
 };
 
-const deleteRecord = async (model, id, io, eventName) => {
+const deleteRecord = async (model, where, io, eventName) => {
   try {
-    await prisma[model].delete({
-      where: { id: parseInt(id) },
-    });
+    await prisma[model].delete(where);
     if (io && eventName) {
       io.emit(eventName);
     }
@@ -94,4 +102,5 @@ export {
   fetchRecords,
   allRecords,
   countRecord,
+  getRecordById,
 };

@@ -33,6 +33,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { z, ZodError } from "zod";
 
+import { defineAbilitiesFor } from "@/lib/abilities";
+
 import {
   createChannel,
   updateChannel,
@@ -40,6 +42,8 @@ import {
   fetchChannels,
 } from "@/server-actions/channelActions";
 import { User } from "@prisma/client";
+import { UserWithRole } from "@/context/types";
+// import { useAbility } from "@casl/react";
 
 const channelSchema = z.object({
   id: z.number().optional(),
@@ -52,14 +56,16 @@ type Channel = {
   id: number;
   name: string;
   isActive: boolean;
-  userId?: number;
+  userId?: number | null;
 };
 
 interface ChannelManagementProps {
-  user: User;
+  user: UserWithRole;
 }
 
 const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
+  const ability = useMemo(() => defineAbilitiesFor(user), [user]);
+
   const [open, setOpen] = useState(false);
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
   const [formData, setFormData] = useState<Partial<Channel>>({});
@@ -96,7 +102,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
         sorting: JSON.stringify(sorting ?? []),
       };
 
-      const { records, totalRowCount } = await fetchChannels(params);
+      const { records, totalRowCount } = await fetchChannels(params, user);
       setChannels(records);
       setRowCount(totalRowCount);
     } catch (error) {
@@ -147,12 +153,21 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
       // setFormData();
 
       if (currentChannel) {
-        await updateChannel(currentChannel.id, dataToSubmit);
-        channelsData();
+        // if (ability.can("update", currentChannel)) {
+          await updateChannel(currentChannel.id, dataToSubmit, user);
+          channelsData();
+        // } else {
+        //   setValidationError(
+        //     "You do not have permission to update this channel."
+        //   );
+        // }
       } else {
-        console.log(formData);
-        await createChannel(dataToSubmit);
-        channelsData();
+        if (ability.can("create", "Channel")) {
+          await createChannel(dataToSubmit, user);
+          channelsData();
+        } else {
+          setValidationError("You do not have permission to create a channel.");
+        }
       }
       handleClose();
     } catch (error) {
@@ -165,14 +180,20 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this channel?")) {
+    // const channelToDelete = channels.find((channel) => channel.id === id);
+    // if (
+    //   ability.can("delete", channelToDelete) &&
+    //   window.confirm("Are you sure you want to delete this channel?")
+    // ) {
       try {
-        await deleteChannel(id);
+        await deleteChannel(id, user);
         channelsData();
       } catch (error) {
         console.error("Error deleting channel:", error);
       }
-    }
+    // } else {
+    //   console.error("You do not have permission to delete this channel.");
+    // }
   };
 
   const handleColumnFiltersChange = useCallback(
@@ -294,24 +315,29 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
       showProgressBars: isRefetching,
       sorting,
     },
-    renderRowActions: ({ row, table }) => (
+    renderRowActions: ({ row }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
-        <Tooltip title="Edit">
-          <IconButton onClick={() => handleOpen(row.original)}>
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton
-            color="error"
-            onClick={() => handleDelete(row.original.id)}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
+        {ability.can("update", "Channel") && (
+          <Tooltip title="Edit">
+            <IconButton onClick={() => handleOpen(row.original)}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+         {ability.can("delete", "Channel") && ( 
+          <Tooltip title="Delete">
+            <IconButton
+              color="error"
+              onClick={() => handleDelete(row.original.id)}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
+        )} 
       </Box>
     ),
-    renderTopToolbar: ({ table }) => (
+
+    renderTopToolbar: () => (
       <Box
         sx={(theme) => ({
           backgroundColor: lighten(theme.palette.background.default, 0.05),
@@ -321,14 +347,16 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
           justifyContent: "space-between",
         })}
       >
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpen()}
-          startIcon={<AddIcon />}
-        >
-          Add Channel
-        </Button>
+        {ability.can("create", "Channel") && ( 
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleOpen()}
+            startIcon={<AddIcon />}
+          >
+            Add Channel
+          </Button>
+         )} 
         <Box sx={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <MRT_GlobalFilterTextField table={table} />
           <MRT_ToggleFiltersButton table={table} />

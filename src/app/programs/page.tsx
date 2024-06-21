@@ -28,7 +28,7 @@ const Program: React.FC = () => {
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <ProgramManagement />
+          <ProgramManagement user={user}/>
         </Box>
       </Box>
     </>
