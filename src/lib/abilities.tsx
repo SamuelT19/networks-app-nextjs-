@@ -5,7 +5,7 @@ import { createPrismaAbility, PrismaQuery, Subjects } from "@casl/prisma";
 import { User, Channel, Program } from "@prisma/client";
 
 type AppAbility = PureAbility<
-  [string, Subjects<{ User: User; Channel: Channel; Program: Program }>],
+  [string,"all" | Subjects<{ User: User; Channel: Channel; Program: Program, }>],
   PrismaQuery
 >;
 

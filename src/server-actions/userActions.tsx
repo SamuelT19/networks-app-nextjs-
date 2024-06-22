@@ -12,6 +12,10 @@ type UserData = {
   email: string;
   password: string;
   roleId: number;
+  role?: {
+    id?: number;
+    name?: string;
+  };
 };
 
 const updateUser = async (currentUser: UserWithRole, data: UserData, id: number) => {
@@ -158,7 +162,7 @@ const loginUser = async ({
 }: {
   username: string;
   password: string;
-}): Promise<{ success: boolean; user?: User }> => {
+}): Promise<{ success: boolean; user?: UserWithRole }> => {
   try {
     const user = await prisma.user.findUnique({
       where: { username },

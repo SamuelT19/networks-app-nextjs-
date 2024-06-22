@@ -41,4 +41,4 @@ export interface State {
 export type Action =
   | { type: "TOGGLE_FAVORITE"; payload: string }
   | { type: "TOGGLE_WATCH_LATER"; payload: string }
-  | { type: "SET_USER"; payload: User };
+  | { type: "SET_USER"; payload: UserWithRole};

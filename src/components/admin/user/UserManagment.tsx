@@ -67,7 +67,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
   
   const abilities = defineAbilitiesFor(currentUser);
 
-  if (!abilities.can('manage', 'all')) {
+  if (!abilities.can('manage', "all")) {
     return <div>Access Denied</div>;
   }
 

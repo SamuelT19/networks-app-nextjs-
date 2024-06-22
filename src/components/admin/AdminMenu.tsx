@@ -9,13 +9,14 @@ import { Box, Button } from "@mui/material";
 import Link from "next/link";
 import { defineAbilitiesFor } from "@/lib/abilities";
 import { useProgramsContext } from "@/context/ProgramsContext";
+import { UserWithRole } from "@/context/types";
 
 function AdminMenu() {
   const pathname = usePathname();
   const { state } = useProgramsContext();
 
   const { user } = state;
-  const ability = defineAbilitiesFor(user); 
+  const ability = defineAbilitiesFor(user as UserWithRole); 
 
   const buttonStyles = (path: string) => ({
     width: "100%",
