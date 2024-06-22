@@ -412,11 +412,14 @@ console.log(user)
     },
     renderRowActions: ({ row, table }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
+        {ability.can("update", "Program") && (
         <Tooltip title="Edit">
           <IconButton onClick={() => handleOpenDialog(row.original)}>
             <EditIcon />
           </IconButton>
         </Tooltip>
+          )}
+         {ability.can("delete", "Program") && ( 
         <Tooltip title="Delete">
           <IconButton
             color="error"
@@ -428,6 +431,7 @@ console.log(user)
             <DeleteIcon />
           </IconButton>
         </Tooltip>
+         )} 
       </Box>
     ),
     renderTopToolbar: ({ table }) => (
@@ -440,6 +444,7 @@ console.log(user)
           justifyContent: "space-between",
         })}
       >
+        {ability.can("create", "Program") && ( 
         <Button
           variant="contained"
           color="primary"
@@ -448,6 +453,7 @@ console.log(user)
         >
           Add Program
         </Button>
+        )}
         <Box
           sx={{
             display: "flex",
