@@ -202,7 +202,7 @@ console.log(user)
     console.log(isSaving);
 
     try {
-      if (editingProgram) {
+      if (editingProgram && editingProgram.id !== undefined) {
         const data = {
           title: newProgram.title,
           duration: newProgram.duration,
