@@ -41,8 +41,8 @@ const LoginForm: React.FC = () => {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      username: '',
-      password: '',
+      username: "",
+      password: "",
     },
   });
 
@@ -52,17 +52,20 @@ const LoginForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FormData> = async () => {
     const { username, password } = getValues();
-    console.log(password)
+    console.log(password);
     try {
       const { success, user } = await loginUser({ username, password });
-      console.log(user)
       if (!success || !user) {
         setError("Invalid username or password");
+        setTimeout(() => {
+          setError("");
+        }, 1000);
       } else {
         setUserInLocalStorage(user, 24);
         dispatch({ type: "SET_USER", payload: user });
         router.push("/dashboard");
       }
+      console.log(user);
     } catch (error) {
       console.error("Login failed:", error);
       setError("An error occurred during login");

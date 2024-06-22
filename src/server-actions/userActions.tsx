@@ -1,53 +1,135 @@
 "use server";
 
 import { PrismaClient, User } from "@prisma/client";
-import bcrypt from "bcrypt";
+import { defineAbilitiesFor } from "@/lib/abilities";
+import { UserWithRole } from "@/context/types";
 
 const prisma = new PrismaClient();
 
 type UserData = {
+  id?: number;
   username: string;
   email: string;
   password: string;
-  isAdmin: boolean;
+  roleId: number;
+  role?: {
+    id?: number;
+    name?: string;
+  };
 };
 
-const createUser = async (
-  data: UserData
-): Promise<User | { error: string }> => {
+const updateUser = async (currentUser: UserWithRole, data: UserData, id: number) => {
+  const abilities = defineAbilitiesFor(currentUser);
+  
+  if (!abilities.can("update", "User")) {
+    return { error: "Access denied" };
+  }
+  
   try {
-    const { username, email, password, isAdmin } = data;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { username, email, password, roleId } = data;
+    let updateData: any = {
+      username,
+      email,
+    };
+
+    if (password) {
+      updateData.password = password;
+    }
+
+    const role = await prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      return { error: `Role with ID '${roleId}' not found.` };
+    }
+
+    updateData.roleId = role.id;
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      include: {
+        role: true,
+      },
+    });
+
+    return updatedUser;
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+};
+
+const createUser = async (currentUser: UserWithRole, data: UserData) => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("create", "User")) {
+    return { error: "Access denied" };
+  }
+
+  try {
+    const { username, email, password, roleId } = data;
+
+    const role = await prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      return { error: `Role with ID '${roleId}' not found.` };
+    }
+
     const user = await prisma.user.create({
       data: {
         username,
         email,
-        password: hashedPassword,
-        isAdmin,
+        password,
+        roleId: role.id,
+      },
+      include: {
+        role: true,
       },
     });
+
     return user;
   } catch (error) {
     return { error: (error as Error).message };
   }
 };
 
-const getAllUsers = async (): Promise<
-  { users: User[]; count: number } | { error: string }
-> => {
+const getAllUsers = async (currentUser: UserWithRole): Promise<{ users: User[] } | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("read", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
-    const users = await prisma.user.findMany();
-    return { users, count: users.length };
+    const users = await prisma.user.findMany({
+      include: {
+        role: true,
+      },
+    });
+    return { users };
   } catch (error) {
     return { error: (error as Error).message };
   }
 };
 
-const getUserById = async (id: string): Promise<User | { error: string }> => {
+const getUserById = async (currentUser: UserWithRole, id: number): Promise<User | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
+
+  if (!abilities.can("read", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
+      include: {
+        role: true,
+      },
     });
+
     if (user) {
       return user;
     } else {
@@ -58,34 +140,16 @@ const getUserById = async (id: string): Promise<User | { error: string }> => {
   }
 };
 
-const updateUser = async (
-  data: Partial<UserData>,
-  id: string
-): Promise<User | { error: string }> => {
-  try {
-    const { username, email, password, isAdmin } = data;
-    const hashedPassword = password
-      ? await bcrypt.hash(password, 10)
-      : undefined;
-    const user = await prisma.user.update({
-      where: { id: parseInt(id) },
-      data: {
-        username,
-        email,
-        ...(hashedPassword && { password: hashedPassword }),
-        isAdmin,
-      },
-    });
-    return user;
-  } catch (error) {
-    return { error: (error as Error).message };
-  }
-};
+const deleteUser = async (currentUser: UserWithRole, id: number): Promise<void | { error: string }> => {
+  const abilities = defineAbilitiesFor(currentUser);
 
-const deleteUser = async (id: string): Promise<void | { error: string }> => {
+  if (!abilities.can("delete", "User")) {
+    return { error: "Access denied" };
+  }
+
   try {
     await prisma.user.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
   } catch (error) {
     return { error: (error as Error).message };
@@ -98,15 +162,19 @@ const loginUser = async ({
 }: {
   username: string;
   password: string;
-}): Promise<{ success: boolean; user?: User }> => {
+}): Promise<{ success: boolean; user?: UserWithRole }> => {
   try {
     const user = await prisma.user.findUnique({
       where: { username },
+      include: {
+        role: true,
+      },
     });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || user.password !== password) {
       return { success: false };
     }
+
     return { success: true, user };
   } catch (error) {
     console.error("Login failed:", error);
@@ -132,3 +200,4 @@ export {
   getUserById,
   usersCount,
 };
+

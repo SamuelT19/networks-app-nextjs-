@@ -3,7 +3,27 @@ export interface User {
   username: string;
   email: string;
   password: string;
-  isAdmin: boolean;
+  roleId: number;
+  role: {
+    id: number;
+    name: string;
+  };
+}
+type Role = {
+  id: number;
+  name: string;
+};
+
+export interface UserWithRole {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  roleId: number;
+  role: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface Movie {
@@ -19,6 +39,6 @@ export interface State {
 }
 
 export type Action =
-  | { type: 'TOGGLE_FAVORITE'; payload: string }
-  | { type: 'TOGGLE_WATCH_LATER'; payload: string }
-  | { type: 'SET_USER'; payload: User };
+  | { type: "TOGGLE_FAVORITE"; payload: string }
+  | { type: "TOGGLE_WATCH_LATER"; payload: string }
+  | { type: "SET_USER"; payload: UserWithRole};

@@ -11,6 +11,7 @@ CREATE TABLE "Channel" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN,
+    "userId" INTEGER,
 
     CONSTRAINT "Channel_pkey" PRIMARY KEY ("id")
 );
@@ -27,6 +28,7 @@ CREATE TABLE "Program" (
     "typeId" INTEGER,
     "categoryId" INTEGER,
     "isActive" BOOLEAN,
+    "userId" INTEGER,
 
     CONSTRAINT "Program_pkey" PRIMARY KEY ("id")
 );
@@ -45,9 +47,17 @@ CREATE TABLE "User" (
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "isAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "roleId" INTEGER NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Role" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -55,6 +65,12 @@ CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
+
+-- AddForeignKey
+ALTER TABLE "Channel" ADD CONSTRAINT "Channel_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Program" ADD CONSTRAINT "Program_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -64,3 +80,9 @@ ALTER TABLE "Program" ADD CONSTRAINT "Program_channelId_fkey" FOREIGN KEY ("chan
 
 -- AddForeignKey
 ALTER TABLE "Program" ADD CONSTRAINT "Program_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "Type"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Program" ADD CONSTRAINT "Program_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

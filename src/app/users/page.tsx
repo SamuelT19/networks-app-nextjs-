@@ -4,11 +4,10 @@ import React from "react";
 import AdminNav from "@/components/admin/AdminNav";
 import AdminMenu from "@/components/admin/AdminMenu";
 import { Box } from "@mui/material";
-import ProgramManagement from "@/components/admin/programs/ProgramManagement";
-import { useProgramsContext } from "@/context/ProgramsContext";
 import { useRouter } from "next/navigation";
-
-const Program: React.FC = () => {
+import { useProgramsContext } from "@/context/ProgramsContext";
+import UserManagement from "@/components/admin/user/UserManagment";
+const User: React.FC = () => {
   const { state } = useProgramsContext();
 
   const { user } = state;
@@ -23,16 +22,16 @@ const Program: React.FC = () => {
   return (
     <>
       <Box>
-        <AdminNav title="Programs" />
+        <AdminNav title="Users" />
       </Box>
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <ProgramManagement user={user}/>
+          <UserManagement currentUser={user}/>
         </Box>
       </Box>
     </>
   );
 };
 
-export default Program;
+export default User;

@@ -11,6 +11,7 @@ const Channel: React.FC = () => {
   const { state } = useProgramsContext();
 
   const { user } = state;
+  console.log(user)
 
   const router = useRouter();
 
@@ -27,7 +28,7 @@ const Channel: React.FC = () => {
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <ChannelManagement />
+          <ChannelManagement user={user}/>
         </Box>
       </Box>
     </>
