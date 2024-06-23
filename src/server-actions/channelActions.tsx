@@ -13,25 +13,10 @@ import { applyFilter } from "@/utils/filterHandler";
 import { defineAbilitiesFor } from "@/lib/abilities";
 import { UserWithRole } from "@/context/types";
 import { accessibleBy } from "@casl/prisma";
-
-type ChannelData = {
-  id?: number;
-  name?: string;
-  isActive?: boolean;
-  userId?: number;
-};
-
-type FetchChannelsParams = {
-  start?: string;
-  size?: string;
-  filters?: string;
-  filtersFn?: string;
-  globalFilter?: string;
-  sorting?: string;
-};
+import { ChannelData, ProgramData } from "@/lib/typeCollection";
 
 const createChannel = async (data: ChannelData, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("create", "Channel")) {
     return await createRecord("channel", data);
@@ -44,7 +29,7 @@ const updateChannel = async (
   data: ChannelData,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("update", "Channel")) {
     try {
@@ -60,17 +45,16 @@ const updateChannel = async (
 };
 
 const deleteChannel = async (id: number, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("delete", "Channel")) {
     try {
       return await deleteRecord("channel", {
-      where: { AND: accessibleBy(ability).Channel, id },
-    })
+        where: { AND: accessibleBy(ability).Channel, id },
+      });
     } catch (error) {
       throw new Error("Permission denied");
     }
-    
   }
 
   throw new Error("Permission denied");
@@ -92,10 +76,10 @@ const fetchChannels = async (
     filtersFn = "[]",
     globalFilter = "",
     sorting = "[]",
-  }: FetchChannelsParams,
+  }: ProgramData,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   let where: Record<string, any> = {};
 
@@ -126,12 +110,15 @@ const fetchChannels = async (
     }));
   }
 
+console.log(ability)
+
   const { records, totalRowCount } = await fetchRecords(
     "channel",
     {
-      AND: accessibleBy(ability).Channel,...where
+      AND: accessibleBy(ability).Channel,
+      ...where,
     },
-  
+
     orderBy,
     {
       skip: parseInt(start, 10) * parseInt(size, 10),

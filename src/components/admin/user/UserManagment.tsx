@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -35,9 +35,10 @@ import {
   getAllUsers,
 } from "@/server-actions/userActions";
 
-import { defineAbilitiesFor } from "@/lib/abilities";
-import { User } from "@prisma/client";
+import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
+// import { User } from "@prisma/client";
 import { UserWithRole } from "@/context/types";
+import { getAllRoles } from "@/server-actions/roleActions";
 
 const userSchema = z.object({
   id: z.number().optional(),
@@ -47,48 +48,48 @@ const userSchema = z.object({
   roleId: z.number().min(1),
 });
 
-
 interface Setter {
   id: number;
   name: string;
 }
 
-const idToRoleName: { [key: number]: string } = {
-  1: "Admin",
-  2: "Editor",
-  3: "Contributor",
-  4: "Viewer",
-};
 interface UserManagementProps {
-  currentUser: UserWithRole;
+  user: UserWithRole;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
-  
-  const abilities = defineAbilitiesFor(currentUser);
+const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
+  const [ability, setAbility] = useState<AppAbility | null>(null);
 
-  if (!abilities.can('manage', "all")) {
+  useEffect(() => {
+    const fetchAbilities = async () => {
+      const fetchedAbility = await defineAbilitiesFor(user);
+      setAbility(fetchedAbility); 
+    };
+
+    fetchAbilities();
+  }, [user]);
+  if (ability && !ability.can("manage", "all")) {
     return <div>Access Denied</div>;
   }
 
   const [open, setOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<Partial<User>>({});
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [formData, setFormData] = useState<Partial<UserWithRole>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Setter[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchUserData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getAllUsers(currentUser);
-      if ('error' in response) {
+      const response = await getAllUsers(user);
+      if ("error" in response) {
         setIsError(true);
         console.error("Error fetching users:", response.error);
       } else {
-        setUsers(response.users.map((user) => ({ ...user, role: idToRoleName[user.roleId!] })));
+        setUsers(response.users as UserWithRole[]);
       }
     } catch (error) {
       console.error("Unexpected error fetching users:", error);
@@ -96,22 +97,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    setRoles([
-      { id: 1, name: "Admin" },
-      { id: 2, name: "Editor" },
-      { id: 3, name: "Contributor" },
-      { id: 4, name: "Viewer" },
-    ]);
   }, []);
+  console.log(users);
+  useEffect(() => {
+    fetchUserData();
+    
+  }, [fetchUserData]);
 
-  const handleOpen = (user: User | null = null) => {
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const roles = await getAllRoles();
+
+      setRoles(roles);
+    };
+    fetchRoles();
+  }, []);
+  console.log(roles);
+  const handleOpen = (user: UserWithRole | null = null) => {
     setSelectedUser(user);
     setFormData(user ? { ...user } : {});
     setOpen(true);
@@ -134,11 +136,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
       const parsedData = userSchema.parse(formData);
 
       if (selectedUser) {
-        await updateUser(currentUser, parsedData, selectedUser.id!);
+        await updateUser(user, parsedData, selectedUser.id!);
       } else {
-        await createUser(currentUser, parsedData);
+        await createUser(user, parsedData);
       }
-      fetchData();
+      fetchUserData();
       handleClose();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -152,15 +154,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        await deleteUser(currentUser, id);
-        fetchData();
+        await deleteUser(user, id);
+        fetchUserData();
       } catch (error) {
         console.error("Error deleting user:", error);
       }
     }
   };
 
-  const columns = useMemo<MRT_ColumnDef<User>[]>(
+  const columns = useMemo<MRT_ColumnDef<UserWithRole>[]>(
     () => [
       {
         accessorKey: "id",
@@ -175,7 +177,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
         header: "Email",
       },
       {
-        accessorKey: "role",
+        accessorFn: (row) => row.role?.name || "",
+        id: "roleId",
         header: "Role",
       },
     ],
@@ -315,4 +318,3 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
 };
 
 export default UserManagement;
-

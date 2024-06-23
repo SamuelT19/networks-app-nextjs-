@@ -45,7 +45,7 @@ import {
 } from "@/server-actions/programActions";
 // import { useSocket, emitSocketEvent } from "@/utils/socketUtils";
 
-import { defineAbilitiesFor } from "@/lib/abilities";
+import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
 import { UserWithRole } from "@/context/types";
 
 interface Setter {
@@ -58,7 +58,7 @@ interface ProgramManagementProps {
 }
 
 const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
-  const ability = useMemo(() => defineAbilitiesFor(user), [user]);
+  // const ability = useMemo(() => defineAbilitiesFor(user), [user]);
 
   const [validationErrors, setValidationErrors] = useState<
     Record<string | number, string | number | undefined>
@@ -100,6 +100,15 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [ability, setAbility] = useState<AppAbility | null>(null); 
+  useEffect(() => {
+    const fetchAbilities = async () => {
+      const fetchedAbility = await defineAbilitiesFor(user);
+      setAbility(fetchedAbility); // Store the fetched ability in state
+    };
+
+    fetchAbilities();
+  }, [user]);
 
   const programsData = useCallback(async () => {
     setIsLoading(true);
@@ -112,6 +121,7 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
         globalFilter: globalFilter ?? "",
         sorting: JSON.stringify(sorting ?? []),
       };
+      console.log(user)
       const { records, totalRowCount } = await fetchPrograms(params, user);
       setPrograms(records);
       setRowCount(totalRowCount);
@@ -412,14 +422,14 @@ console.log(user)
     },
     renderRowActions: ({ row, table }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
-        {ability.can("update", "Program") && (
+        {ability && ability.can("update", "Program") && (
         <Tooltip title="Edit">
           <IconButton onClick={() => handleOpenDialog(row.original)}>
             <EditIcon />
           </IconButton>
         </Tooltip>
           )}
-         {ability.can("delete", "Program") && ( 
+         {ability && ability.can("delete", "Program") && ( 
         <Tooltip title="Delete">
           <IconButton
             color="error"
@@ -444,7 +454,7 @@ console.log(user)
           justifyContent: "space-between",
         })}
       >
-        {ability.can("create", "Program") && ( 
+        {ability && ability.can("create", "Program") && ( 
         <Button
           variant="contained"
           color="primary"

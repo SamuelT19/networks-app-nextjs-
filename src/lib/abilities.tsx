@@ -1,33 +1,51 @@
-// abilities.js
-import { UserWithRole } from "@/context/types";
-import { PureAbility, AbilityBuilder, AbilityClass } from "@casl/ability";
+import { User, Channel, Program, Prisma } from "@prisma/client";
+import { AbilityBuilder, AbilityClass, PureAbility } from "@casl/ability";
 import { createPrismaAbility, PrismaQuery, Subjects } from "@casl/prisma";
-import { User, Channel, Program } from "@prisma/client";
+import { UserWithRole } from "@/context/types";
+import { getUser } from "@/server-actions/userActions";
 
-type AppAbility = PureAbility<
-  [string,"all" | Subjects<{ User: User; Channel: Channel; Program: Program, }>],
+export type AppAbility = PureAbility<
+  [
+    string,
+    "all" | Subjects<{ User: User; Channel: Channel; Program: Program }>
+  ],
   PrismaQuery
 >;
+type AppSubjects = "User" | "Channel" | "Program" | "all";
 
-const AppAbility = PureAbility as AbilityClass<AppAbility>;
+export const AppAbility = PureAbility as AbilityClass<AppAbility>;
 
-export function defineAbilitiesFor(user: UserWithRole) {
+export async function defineAbilitiesFor(user: UserWithRole) {
+  const userId = user.id;
+  const logeduser = await getUser(userId);
+
+  if (!logeduser) throw new Error("User not found");
+
   const { can, cannot, build } = new AbilityBuilder<AppAbility>(
     createPrismaAbility
   );
 
-  if (user.role.name === "Admin") {
-    can("manage", "all");
-  } else if (user.role.name === "Editor") {
-    can(["read", "create", "update", "delete"], "Channel");
-    can(["read", "create", "update", "delete"], "Program");
-  } else if (user.role.name === "Contributor") {
-    can("create", "Channel");
-    can(["update", "delete", "read"], "Channel", { userId: user.id });
-    can(["read", "create", "update", "delete"], "Program");
-  } else if (user.role.name === "Viewer") {
-    can("read", "Program");
-  }
+  logeduser.role.permissions.forEach(({ permission }) => {
+    const subject = permission.subject as AppSubjects;
+    
+    let conditions: any; 
+
+    try {
+      conditions = parseConditions(permission.conditions);
+    } catch (error) {
+      console.error(`Error parsing conditions for permission ${permission.id}:`, error);
+      conditions = undefined;
+    }
+    can(permission.action, subject, conditions);
+  });
 
   return build();
+}
+
+function parseConditions(conditions: Prisma.JsonValue): any {
+  if (typeof conditions === 'string') {
+    return JSON.parse(conditions);
+  } else {
+    return conditions;
+  }
 }

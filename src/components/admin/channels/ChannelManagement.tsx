@@ -33,7 +33,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { z, ZodError } from "zod";
 
-import { defineAbilitiesFor } from "@/lib/abilities";
+import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
 
 import {
   createChannel,
@@ -41,8 +41,8 @@ import {
   deleteChannel,
   fetchChannels,
 } from "@/server-actions/channelActions";
-import { User } from "@prisma/client";
 import { UserWithRole } from "@/context/types";
+import { ChannelData } from "@/lib/typeCollection";
 // import { useAbility } from "@casl/react";
 
 const channelSchema = z.object({
@@ -52,26 +52,21 @@ const channelSchema = z.object({
   userId: z.number().optional(),
 });
 
-type Channel = {
-  id: number;
-  name: string;
-  isActive: boolean;
-  userId?: number | null;
-};
+
 
 interface ChannelManagementProps {
   user: UserWithRole;
 }
 
 const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
-  const ability = useMemo(() => defineAbilitiesFor(user), [user]);
+  // const ability = useMemo(() => defineAbilitiesFor(user), [user]);
 
   const [open, setOpen] = useState(false);
-  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
-  const [formData, setFormData] = useState<Partial<Channel>>({});
+  const [currentChannel, setCurrentChannel] = useState<ChannelData | null>(null);
+  const [formData, setFormData] = useState<Partial<ChannelData>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const [channels, setChannels] = useState<ChannelData[]>([]);
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
@@ -89,6 +84,17 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
     pageSize: 10,
   });
   console.log(user);
+
+  const [ability, setAbility] = useState<AppAbility | null>(null);
+
+  useEffect(() => {
+    const fetchAbilities = async () => {
+      const fetchedAbility = await defineAbilitiesFor(user);
+      setAbility(fetchedAbility); // Store the fetched ability in state
+    };
+
+    fetchAbilities();
+  }, [user]);
 
   const channelsData = useCallback(async () => {
     setIsLoading(true);
@@ -124,7 +130,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
     channelsData();
   }, [channelsData, columnFilterFns]);
 
-  const handleOpen = (channel: Channel | null = null) => {
+  const handleOpen = (channel: ChannelData | null = null) => {
     setCurrentChannel(channel);
     setFormData(channel ? { ...channel } : {});
     setOpen(true);
@@ -152,17 +158,17 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
       channelSchema.parse(formData);
       // setFormData();
 
-      if (currentChannel) {
+      if (currentChannel && currentChannel.id !== undefined) {
         // if (ability.can("update", currentChannel)) {
-          await updateChannel(currentChannel.id, dataToSubmit, user);
-          channelsData();
+        await updateChannel(currentChannel.id, dataToSubmit, user);
+        channelsData();
         // } else {
         //   setValidationError(
         //     "You do not have permission to update this channel."
         //   );
         // }
       } else {
-        if (ability.can("create", "Channel")) {
+        if (ability && ability.can("create", "Channel")) {
           await createChannel(dataToSubmit, user);
           channelsData();
         } else {
@@ -185,12 +191,12 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
     //   ability.can("delete", channelToDelete) &&
     //   window.confirm("Are you sure you want to delete this channel?")
     // ) {
-      try {
-        await deleteChannel(id, user);
-        channelsData();
-      } catch (error) {
-        console.error("Error deleting channel:", error);
-      }
+    try {
+      await deleteChannel(id, user);
+      channelsData();
+    } catch (error) {
+      console.error("Error deleting channel:", error);
+    }
     // } else {
     //   console.error("You do not have permission to delete this channel.");
     // }
@@ -246,7 +252,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
     ],
   };
 
-  const columns = useMemo<MRT_ColumnDef<Channel>[]>(
+  const columns = useMemo<MRT_ColumnDef<ChannelData>[]>(
     () => [
       {
         accessorKey: "id",
@@ -317,23 +323,25 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
     },
     renderRowActions: ({ row }) => (
       <Box sx={{ display: "flex", gap: "1rem" }}>
-        {ability.can("update", "Channel") && (
+        {ability && ability.can("update", "Channel") && (
           <Tooltip title="Edit">
             <IconButton onClick={() => handleOpen(row.original)}>
               <EditIcon />
             </IconButton>
           </Tooltip>
         )}
-         {ability.can("delete", "Channel") && ( 
+        {ability && ability.can("delete", "Channel") && (
           <Tooltip title="Delete">
             <IconButton
               color="error"
-              onClick={() => handleDelete(row.original.id)}
+              onClick={() =>
+                row.original.id !== undefined && handleDelete(row.original.id)
+              }
             >
               <DeleteIcon />
             </IconButton>
           </Tooltip>
-        )} 
+        )}
       </Box>
     ),
 
@@ -347,7 +355,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
           justifyContent: "space-between",
         })}
       >
-        {ability.can("create", "Channel") && ( 
+        {ability && ability.can("create", "Channel") && (
           <Button
             variant="contained"
             color="primary"
@@ -356,7 +364,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
           >
             Add Channel
           </Button>
-         )} 
+        )}
         <Box sx={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <MRT_GlobalFilterTextField table={table} />
           <MRT_ToggleFiltersButton table={table} />

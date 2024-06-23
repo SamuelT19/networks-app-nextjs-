@@ -16,21 +16,13 @@ import {
   ProgramSchema,
   Program,
 } from "@/components/admin/programs/programType";
-
-type FetchProgramsParams = {
-  start?: string;
-  size?: string;
-  filters?: string;
-  filtersFn?: string;
-  globalFilter?: string;
-  sorting?: string;
-};
+import { ProgramData } from "@/lib/typeCollection";
 
 const include = { channel: true, type: true, category: true };
 
 const createProgram = async (data: Partial<Program>, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
-  
+  const ability = await defineAbilitiesFor(user);
+
   if (ability.can("create", "Program")) {
     ProgramSchema.parse(data);
     return await createRecord("program", data);
@@ -43,7 +35,7 @@ const updateProgram = async (
   data: Partial<Program>,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("update", "Program")) {
     try {
@@ -61,7 +53,7 @@ const updateProgram = async (
 };
 
 const deleteProgram = async (id: number, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("delete", "Program")) {
     try {
@@ -91,11 +83,11 @@ const fetchPrograms = async (
     filtersFn = "[]",
     globalFilter = "",
     sorting = "[]",
-  }: FetchProgramsParams,
+  }: ProgramData,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
-  
+  const ability = await defineAbilitiesFor(user);
+
   let where: Record<string, any> = {};
 
   if (globalFilter) {
@@ -124,6 +116,10 @@ const fetchPrograms = async (
     });
   }
 
+//  if (user.id) { // Assuming user.id is where the actual userId is stored
+//     where.userId = user.id; // Provide the actual userId here
+//   }
+
   let orderBy: any[] = [];
   if (sorting) {
     const parsedSorting = JSON.parse(sorting);
@@ -135,7 +131,8 @@ const fetchPrograms = async (
   const { records, totalRowCount } = await fetchRecords(
     "program",
     {
-      AND: accessibleBy(ability).Program,...where
+      AND: accessibleBy(ability).Program,
+      ...where,
     },
     orderBy,
     {
@@ -145,7 +142,6 @@ const fetchPrograms = async (
     include
   );
 
- 
   return {
     records,
     totalRowCount,
@@ -160,4 +156,3 @@ export {
   countPrograms,
   allPrograms,
 };
-

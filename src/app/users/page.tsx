@@ -7,6 +7,7 @@ import { Box } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useProgramsContext } from "@/context/ProgramsContext";
 import UserManagement from "@/components/admin/user/UserManagment";
+import RoleManagement from "@/components/admin/roles/RoleManagement";
 const User: React.FC = () => {
   const { state } = useProgramsContext();
 
@@ -27,7 +28,10 @@ const User: React.FC = () => {
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <UserManagement currentUser={user}/>
+          <Box sx={{display: "flex",flexDirection:"column", gap:"30px"}}>
+            <UserManagement user={user} />
+            <RoleManagement />
+          </Box>
         </Box>
       </Box>
     </>
