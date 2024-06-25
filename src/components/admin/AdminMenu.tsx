@@ -16,10 +16,9 @@ function AdminMenu() {
   const { state } = useProgramsContext();
 
   const { user } = state;
-  // const ability = defineAbilitiesFor(user as UserWithRole); 
+  // const ability = defineAbilitiesFor(user as UserWithRole);
 
-  const [ability, setAbility] = useState<AppAbility | null>(null); 
-
+  const [ability, setAbility] = useState<AppAbility | null>(null);
 
   useEffect(() => {
     const fetchAbilities = async () => {
@@ -29,9 +28,6 @@ function AdminMenu() {
 
     fetchAbilities();
   }, [user]);
-
-  
-
 
   const buttonStyles = (path: string) => ({
     width: "100%",
@@ -64,18 +60,17 @@ function AdminMenu() {
           zIndex: 10,
         }}
       >
-         
-          <Link href="/dashboard" passHref>
-            <Button
-              variant="text"
-              startIcon={<DashboardIcon />}
-              sx={buttonStyles("/dashboard")}
-            >
-              Dashboard
-            </Button>
-          </Link>
-        
-        {ability && ability.can("read", "Channel") && (
+        <Link href="/dashboard" passHref>
+          <Button
+            variant="text"
+            startIcon={<DashboardIcon />}
+            sx={buttonStyles("/dashboard")}
+          >
+            Dashboard
+          </Button>
+        </Link>
+
+        {ability?.can("read", "Channel") && (
           <Link href="/channels" passHref>
             <Button
               variant="text"
@@ -86,7 +81,7 @@ function AdminMenu() {
             </Button>
           </Link>
         )}
-        
+        {ability?.can("read", "Program") && (
           <Link href="/programs" passHref>
             <Button
               variant="text"
@@ -96,8 +91,8 @@ function AdminMenu() {
               Programs
             </Button>
           </Link>
-        
-        {ability && ability.can("read", "User") && (
+        )}
+        {ability?.can("manage", "all") && (
           <Link href="/users" passHref>
             <Button
               variant="text"
