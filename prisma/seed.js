@@ -129,9 +129,9 @@ const permissions = [
   },
   {
     id: 17,
-    name: "Manage Own Program",
+    name: "Manage Own Channel",
     action: "manage",
-    subject: "Program",
+    subject: "Channel",
     conditions: {
       userId: "{{userId}}" // A condition that the program's userId must match the current user's ID
     },

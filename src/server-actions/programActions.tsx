@@ -7,6 +7,7 @@ import {
   fetchRecords,
   countRecord,
   allRecords,
+  getRecordById,
 } from "../utils/prismaTableUtils";
 import { applyFilter } from "@/utils/filterHandler";
 import { defineAbilitiesFor } from "@/lib/abilities";
@@ -17,6 +18,8 @@ import {
   Program,
 } from "@/components/admin/programs/programType";
 import { ProgramData } from "@/lib/typeCollection";
+import { pick } from "lodash";
+import { permittedFieldsOf } from "@casl/ability/extra";
 
 const include = { channel: true, type: true, category: true };
 
@@ -37,19 +40,31 @@ const updateProgram = async (
 ) => {
   const ability = await defineAbilitiesFor(user);
 
-  if (ability.can("update", "Program")) {
-    try {
-      ProgramSchema.partial().parse(data); // Validation using Zod
-      return await updateRecord(
-        "program",
-        { AND: accessibleBy(ability).Program, id },
-        data
-      );
-    } catch (error) {
-      throw new Error("Permission denied");
-    }
+const FIELDS_OF_PROGRAM = ["title","description","duration","videoUrl","type","channel","category"]
+
+  const fields = permittedFieldsOf(ability, "update", "Program", {
+    fieldsFrom: (rule) => rule.fields || FIELDS_OF_PROGRAM,
+  });
+
+  const updateData = pick(data, fields);
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error(
+      "You do not have permission to update any of the provided fields"
+    );
   }
-  throw new Error("Permission denied");
+
+  try {
+    ProgramSchema.partial().parse(data);
+
+    return await updateRecord(
+      "program",
+      { AND: [accessibleBy(ability, "update").Program], id },
+      updateData
+    );
+  } catch (error) {
+    throw new Error("Permission denied");
+  }
 };
 
 const deleteProgram = async (id: number, user: UserWithRole) => {
@@ -58,7 +73,7 @@ const deleteProgram = async (id: number, user: UserWithRole) => {
   if (ability.can("delete", "Program")) {
     try {
       return await deleteRecord("program", {
-        where: { AND: accessibleBy(ability).Program, id },
+        where: { AND: accessibleBy(ability, "delete").Program, id },
       });
     } catch (error) {
       throw new Error("Permission denied");
@@ -73,6 +88,10 @@ const countPrograms = async () => {
 
 const allPrograms = async () => {
   return await allRecords("program", include);
+};
+
+const getProgramById = async (id: number) => {
+  return await getRecordById("program", id);
 };
 
 const fetchPrograms = async (
@@ -116,10 +135,6 @@ const fetchPrograms = async (
     });
   }
 
-//  if (user.id) { // Assuming user.id is where the actual userId is stored
-//     where.userId = user.id; // Provide the actual userId here
-//   }
-
   let orderBy: any[] = [];
   if (sorting) {
     const parsedSorting = JSON.parse(sorting);
@@ -155,4 +170,5 @@ export {
   fetchPrograms,
   countPrograms,
   allPrograms,
+  getProgramById,
 };

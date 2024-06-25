@@ -29,6 +29,7 @@ export const ProgramSchema = z.object({
   channel: ChannelSchema.optional(),
   type: TypeSchema.optional(),
   category: CategorySchema.optional(),
+  userId: z.number().optional()
 });
 
 export type Program = z.infer<typeof ProgramSchema>;

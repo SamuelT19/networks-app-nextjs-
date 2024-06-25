@@ -69,8 +69,9 @@ model Permission {
   name       String          @unique
   action     String  
   subject    String  
-  inverted   Boolean         @default(false)
   conditions Json?   
+  fields     Json?           
+  inverted   Boolean         @default(false)
   reason     String? 
   roles      RolePermission[]
 }
@@ -78,8 +79,8 @@ model Permission {
 model RolePermission {
   roleId       Int
   permissionId Int
-  role         Role        @relation(fields: [roleId], references: [id])
-  permission   Permission  @relation(fields: [permissionId], references: [id])
+  role         Role         @relation(fields: [roleId], references: [id])
+  permission   Permission   @relation(fields: [permissionId], references: [id])
 
   @@id([roleId, permissionId])
 }

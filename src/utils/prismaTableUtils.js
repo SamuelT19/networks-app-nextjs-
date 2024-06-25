@@ -2,9 +2,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const getRecordById = async (id) => {
+const getRecordById = async (model,id) => {
   try {
-    const record = await prisma.channel.findUnique({ where: { id } });
+    const record = await prisma[model].findUnique({ where: { id } });
     return record;
   } catch (error) {
     console.error(`Error fetching record with ID ${id}:`, error);

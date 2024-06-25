@@ -32,5 +32,6 @@ export type PermissionData = {
   subject: string;
   inverted?: boolean;
   conditions?: any;
+  fields?: any;
   reason?: string;
 };

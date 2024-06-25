@@ -40,9 +40,12 @@ import {
   updateChannel,
   deleteChannel,
   fetchChannels,
+  getChannelById,
 } from "@/server-actions/channelActions";
 import { UserWithRole } from "@/context/types";
 import { ChannelData } from "@/lib/typeCollection";
+import { Channel } from "@prisma/client";
+import { subject } from "@casl/ability";
 // import { useAbility } from "@casl/react";
 
 const channelSchema = z.object({
@@ -52,17 +55,22 @@ const channelSchema = z.object({
   userId: z.number().optional(),
 });
 
-
+type ChannelType = {
+  id: number;
+  name: string;
+  isActive: boolean | null;
+  userId: number | null;
+};
 
 interface ChannelManagementProps {
   user: UserWithRole;
 }
 
 const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
-  // const ability = useMemo(() => defineAbilitiesFor(user), [user]);
-
   const [open, setOpen] = useState(false);
-  const [currentChannel, setCurrentChannel] = useState<ChannelData | null>(null);
+  const [currentChannel, setCurrentChannel] = useState<ChannelData | null>(
+    null
+  );
   const [formData, setFormData] = useState<Partial<ChannelData>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -90,7 +98,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   useEffect(() => {
     const fetchAbilities = async () => {
       const fetchedAbility = await defineAbilitiesFor(user);
-      setAbility(fetchedAbility); // Store the fetched ability in state
+      setAbility(fetchedAbility);
     };
 
     fetchAbilities();
@@ -154,21 +162,33 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   console.log(formData);
   const handleSubmit = async () => {
     try {
-      const dataToSubmit = { ...formData, userId: user.id };
       channelSchema.parse(formData);
-      // setFormData();
 
       if (currentChannel && currentChannel.id !== undefined) {
-        // if (ability.can("update", currentChannel)) {
-        await updateChannel(currentChannel.id, dataToSubmit, user);
-        channelsData();
-        // } else {
-        //   setValidationError(
-        //     "You do not have permission to update this channel."
-        //   );
-        // }
+        const { userId } = await getChannelById(currentChannel.id);
+
+        if (
+          ability &&
+          ability.can(
+            "update",
+            subject("Channel", { ...currentChannel } as Channel)
+          )
+        ) {
+          await updateChannel(
+            currentChannel.id,
+            { ...formData, userId: userId },
+            user
+          );
+          channelsData();
+        } else {
+          console.log("not have permission");
+          setValidationError(
+            "You do not have permission to update this channel."
+          );
+        }
       } else {
         if (ability && ability.can("create", "Channel")) {
+          const dataToSubmit = { ...formData, userId: user.id };
           await createChannel(dataToSubmit, user);
           channelsData();
         } else {
@@ -186,20 +206,25 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   };
 
   const handleDelete = async (id: number) => {
-    // const channelToDelete = channels.find((channel) => channel.id === id);
-    // if (
-    //   ability.can("delete", channelToDelete) &&
-    //   window.confirm("Are you sure you want to delete this channel?")
-    // ) {
-    try {
-      await deleteChannel(id, user);
-      channelsData();
-    } catch (error) {
-      console.error("Error deleting channel:", error);
+    const channelToDelete = channels.find((channel) => channel.id === id);
+    if (
+      ability &&
+      ability.can(
+        "delete",
+        subject("Channel", { ...channelToDelete } as Channel)
+      ) &&
+      window.confirm("Are you sure you want to delete this channel?")
+    ) {
+      try {
+        await deleteChannel(id, user);
+        channelsData();
+      } catch (error) {
+        console.error("Error deleting channel:", error);
+      }
+    } else {
+      console.log("not have permission");
+      setValidationError("You do not have permission to Delete this channel.");
     }
-    // } else {
-    //   console.error("You do not have permission to delete this channel.");
-    // }
   };
 
   const handleColumnFiltersChange = useCallback(
@@ -321,29 +346,43 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
       showProgressBars: isRefetching,
       sorting,
     },
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: "flex", gap: "1rem" }}>
-        {ability && ability.can("update", "Channel") && (
-          <Tooltip title="Edit">
-            <IconButton onClick={() => handleOpen(row.original)}>
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-        {ability && ability.can("delete", "Channel") && (
-          <Tooltip title="Delete">
-            <IconButton
-              color="error"
-              onClick={() =>
-                row.original.id !== undefined && handleDelete(row.original.id)
-              }
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Box>
-    ),
+    renderRowActions: ({ row }) => {
+      const ChannelToUpdate = row.original;
+      const channelToDelete = row.original;
+
+      return (
+        <Box sx={{ display: "flex", gap: "1rem" }}>
+          {ability &&
+            ability.can(
+              "update",
+              subject("Channel", ChannelToUpdate as Channel)
+            ) && (
+              <Tooltip title="Edit">
+                <IconButton onClick={() => handleOpen(row.original)}>
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          {ability &&
+            ability.can(
+              "delete",
+              subject("Channel", channelToDelete as Channel)
+            ) && (
+              <Tooltip title="Delete">
+                <IconButton
+                  color="error"
+                  onClick={() =>
+                    row.original.id !== undefined &&
+                    handleDelete(row.original.id)
+                  }
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+        </Box>
+      );
+    },
 
     renderTopToolbar: () => (
       <Box
@@ -389,31 +428,49 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
             {currentChannel ? "Edit Channel" : "Add Channel"}
           </DialogTitle>
           <DialogContent>
-            <TextField
-              label="Channel Name"
-              name="name"
-              value={formData.name || ""}
-              onChange={handleChange}
-              fullWidth
-            />
-            {currentChannel && (
-              <Box mt={2}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.isActive || false}
-                      onChange={handleSwitchChange}
-                      color="primary"
+            {currentChannel ? (
+              <>
+                {ability?.can("update", "Channel", "name") && (
+                  <TextField
+                    label="Channel Name"
+                    name="name"
+                    value={formData.name || ""}
+                    onChange={handleChange}
+                    fullWidth
+                  />
+                )}
+                {ability?.can("update", "Channel", "isActive") && (
+                  <Box mt={2}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.isActive || false}
+                          onChange={handleSwitchChange}
+                          color="primary"
+                        />
+                      }
+                      label="Active"
                     />
-                  }
-                  label="Active"
+                  </Box>
+                )}
+              </>
+            ) : (
+              <>
+                <TextField
+                  label="Channel Name"
+                  name="name"
+                  value={formData.name || ""}
+                  onChange={handleChange}
+                  fullWidth
                 />
-              </Box>
+              </>
             )}
+
             {validationError && (
               <p style={{ color: "red" }}>{validationError}</p>
             )}
           </DialogContent>
+
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
             <Button onClick={handleSubmit}>

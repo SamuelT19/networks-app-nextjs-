@@ -7,6 +7,7 @@ import {
   fetchRecords,
   countRecord,
   allRecords,
+  getRecordById,
 } from "../utils/prismaTableUtils";
 
 import { applyFilter } from "@/utils/filterHandler";
@@ -14,6 +15,8 @@ import { defineAbilitiesFor } from "@/lib/abilities";
 import { UserWithRole } from "@/context/types";
 import { accessibleBy } from "@casl/prisma";
 import { ChannelData, ProgramData } from "@/lib/typeCollection";
+import { pick } from "lodash";
+import { permittedFieldsOf } from "@casl/ability/extra";
 
 const createChannel = async (data: ChannelData, user: UserWithRole) => {
   const ability = await defineAbilitiesFor(user);
@@ -30,17 +33,30 @@ const updateChannel = async (
   user: UserWithRole
 ) => {
   const ability = await defineAbilitiesFor(user);
+const FIELDS_OF_CHANNEL = ["name","isActive"]
+  const fields = permittedFieldsOf(ability, "update", "Channel", {
+    fieldsFrom: (rule) => rule.fields || FIELDS_OF_CHANNEL,
+  });
+  console.log(fields);
+  // if (!fields.includes('name')) {
+  //   throw new Error('You are not allowed to update the name of the channel');
+  // }
+  const updateData = pick(data, fields);
 
-  if (ability.can("update", "Channel")) {
-    try {
-      return await updateRecord(
-        "channel",
-        { AND: accessibleBy(ability).Channel, id },
-        data
-      );
-    } catch (error) {
-      throw new Error("Permission denied");
-    }
+  if (Object.keys(updateData).length === 0) {
+    throw new Error(
+      "You do not have permission to update any of the provided fields"
+    );
+  }
+
+  try {
+    return await updateRecord(
+      "channel",
+      { AND: accessibleBy(ability, "update").Channel, id },
+      updateData
+    );
+  } catch (error) {
+    throw new Error("Permission denied");
   }
 };
 
@@ -50,7 +66,7 @@ const deleteChannel = async (id: number, user: UserWithRole) => {
   if (ability.can("delete", "Channel")) {
     try {
       return await deleteRecord("channel", {
-        where: { AND: accessibleBy(ability).Channel, id },
+        where: { AND: accessibleBy(ability, "delete").Channel, id },
       });
     } catch (error) {
       throw new Error("Permission denied");
@@ -66,6 +82,10 @@ const countChannels = async () => {
 
 const allChannels = async () => {
   return await allRecords("channel");
+};
+
+const getChannelById = async (id: number) => {
+  return await getRecordById("channel", id);
 };
 
 const fetchChannels = async (
@@ -110,8 +130,6 @@ const fetchChannels = async (
     }));
   }
 
-console.log(ability)
-
   const { records, totalRowCount } = await fetchRecords(
     "channel",
     {
@@ -139,4 +157,5 @@ export {
   countChannels,
   allChannels,
   fetchChannels,
+  getChannelById,
 };
