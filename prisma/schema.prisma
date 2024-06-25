@@ -53,12 +53,34 @@ model User {
   password String
   Program  Program[]
   Channel  Channel[]
-  roleId   Int       
+  roleId   Int       @default(123)
   role     Role      @relation(fields: [roleId], references: [id]) 
 }
 
 model Role {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  users User[] 
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  users       User[] 
+  permissions RolePermission[]
+}
+
+model Permission {
+  id         Int             @id @default(autoincrement())
+  name       String          @unique
+  action     String  
+  subject    String  
+  conditions Json?   
+  fields     Json?           
+  inverted   Boolean         @default(false)
+  reason     String? 
+  roles      RolePermission[]
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role         @relation(fields: [roleId], references: [id])
+  permission   Permission   @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
 }

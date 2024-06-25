@@ -7,6 +7,7 @@ import {
   fetchRecords,
   countRecord,
   allRecords,
+  getRecordById,
 } from "../utils/prismaTableUtils";
 import { applyFilter } from "@/utils/filterHandler";
 import { defineAbilitiesFor } from "@/lib/abilities";
@@ -16,21 +17,15 @@ import {
   ProgramSchema,
   Program,
 } from "@/components/admin/programs/programType";
-
-type FetchProgramsParams = {
-  start?: string;
-  size?: string;
-  filters?: string;
-  filtersFn?: string;
-  globalFilter?: string;
-  sorting?: string;
-};
+import { ProgramData } from "@/lib/typeCollection";
+import { pick } from "lodash";
+import { permittedFieldsOf } from "@casl/ability/extra";
 
 const include = { channel: true, type: true, category: true };
 
 const createProgram = async (data: Partial<Program>, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
-  
+  const ability = await defineAbilitiesFor(user);
+
   if (ability.can("create", "Program")) {
     ProgramSchema.parse(data);
     return await createRecord("program", data);
@@ -43,30 +38,42 @@ const updateProgram = async (
   data: Partial<Program>,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
-  if (ability.can("update", "Program")) {
-    try {
-      ProgramSchema.partial().parse(data); // Validation using Zod
-      return await updateRecord(
-        "program",
-        { AND: accessibleBy(ability).Program, id },
-        data
-      );
-    } catch (error) {
-      throw new Error("Permission denied");
-    }
+const FIELDS_OF_PROGRAM = ["title","description","duration","videoUrl","type","channel","category"]
+
+  const fields = permittedFieldsOf(ability, "update", "Program", {
+    fieldsFrom: (rule) => rule.fields || FIELDS_OF_PROGRAM,
+  });
+
+  const updateData = pick(data, fields);
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error(
+      "You do not have permission to update any of the provided fields"
+    );
   }
-  throw new Error("Permission denied");
+
+  try {
+    ProgramSchema.partial().parse(data);
+
+    return await updateRecord(
+      "program",
+      { AND: [accessibleBy(ability, "update").Program], id },
+      updateData
+    );
+  } catch (error) {
+    throw new Error("Permission denied");
+  }
 };
 
 const deleteProgram = async (id: number, user: UserWithRole) => {
-  const ability = defineAbilitiesFor(user);
+  const ability = await defineAbilitiesFor(user);
 
   if (ability.can("delete", "Program")) {
     try {
       return await deleteRecord("program", {
-        where: { AND: accessibleBy(ability).Program, id },
+        where: { AND: accessibleBy(ability, "delete").Program, id },
       });
     } catch (error) {
       throw new Error("Permission denied");
@@ -83,6 +90,10 @@ const allPrograms = async () => {
   return await allRecords("program", include);
 };
 
+const getProgramById = async (id: number) => {
+  return await getRecordById("program", id);
+};
+
 const fetchPrograms = async (
   {
     start = "0",
@@ -91,11 +102,11 @@ const fetchPrograms = async (
     filtersFn = "[]",
     globalFilter = "",
     sorting = "[]",
-  }: FetchProgramsParams,
+  }: ProgramData,
   user: UserWithRole
 ) => {
-  const ability = defineAbilitiesFor(user);
-  
+  const ability = await defineAbilitiesFor(user);
+
   let where: Record<string, any> = {};
 
   if (globalFilter) {
@@ -135,7 +146,8 @@ const fetchPrograms = async (
   const { records, totalRowCount } = await fetchRecords(
     "program",
     {
-      AND: accessibleBy(ability).Program,...where
+      AND: accessibleBy(ability).Program,
+      ...where,
     },
     orderBy,
     {
@@ -145,7 +157,6 @@ const fetchPrograms = async (
     include
   );
 
- 
   return {
     records,
     totalRowCount,
@@ -159,5 +170,5 @@ export {
   fetchPrograms,
   countPrograms,
   allPrograms,
+  getProgramById,
 };
-

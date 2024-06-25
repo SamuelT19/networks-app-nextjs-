@@ -47,7 +47,7 @@ CREATE TABLE "User" (
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "roleId" INTEGER NOT NULL,
+    "roleId" INTEGER NOT NULL DEFAULT 4,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -60,6 +60,27 @@ CREATE TABLE "Role" (
     CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Permission" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "inverted" BOOLEAN NOT NULL DEFAULT false,
+    "conditions" JSONB,
+    "reason" TEXT,
+
+    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RolePermission" (
+    "roleId" INTEGER NOT NULL,
+    "permissionId" INTEGER NOT NULL,
+
+    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
@@ -68,6 +89,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Permission_name_key" ON "Permission"("name");
 
 -- AddForeignKey
 ALTER TABLE "Channel" ADD CONSTRAINT "Channel_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -86,3 +110,9 @@ ALTER TABLE "Program" ADD CONSTRAINT "Program_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

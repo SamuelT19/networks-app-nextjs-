@@ -35,18 +35,20 @@ import {
   useMaterialReactTable,
 } from "material-react-table";
 import { validateProgram, Program } from "./programType";
-
+import { Program as PrismaProgram } from "@prisma/client";
 import { allChannels } from "@/server-actions/channelActions";
 import {
   createProgram,
   updateProgram,
   deleteProgram,
   fetchPrograms,
+  getProgramById,
 } from "@/server-actions/programActions";
 // import { useSocket, emitSocketEvent } from "@/utils/socketUtils";
 
-import { defineAbilitiesFor } from "@/lib/abilities";
+import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
 import { UserWithRole } from "@/context/types";
+import { subject } from "@casl/ability";
 
 interface Setter {
   id: number;
@@ -58,8 +60,6 @@ interface ProgramManagementProps {
 }
 
 const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
-  const ability = useMemo(() => defineAbilitiesFor(user), [user]);
-
   const [validationErrors, setValidationErrors] = useState<
     Record<string | number, string | number | undefined>
   >({});
@@ -76,7 +76,7 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
-
+  const [error, setError] = useState<string>();
   const [rowCount, setRowCount] = useState(0);
 
   // table state
@@ -100,6 +100,15 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [ability, setAbility] = useState<AppAbility | null>(null);
+  useEffect(() => {
+    const fetchAbilities = async () => {
+      const fetchedAbility = await defineAbilitiesFor(user);
+      setAbility(fetchedAbility); // Store the fetched ability in state
+    };
+
+    fetchAbilities();
+  }, [user]);
 
   const programsData = useCallback(async () => {
     setIsLoading(true);
@@ -183,7 +192,6 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
       [name]: name === "duration" ? Number(value) : value,
     });
   };
-console.log(user)
   const handleSelectChange = (event: SelectChangeEvent<number>) => {
     const { name, value } = event.target;
     setNewProgram({ ...newProgram, [name]: value });
@@ -203,6 +211,7 @@ console.log(user)
 
     try {
       if (editingProgram && editingProgram.id !== undefined) {
+        const { userId } = await getProgramById(editingProgram.id);
         const data = {
           title: newProgram.title,
           duration: newProgram.duration,
@@ -213,15 +222,27 @@ console.log(user)
           channelId: newProgram.channelId,
           typeId: newProgram.typeId,
           categoryId: newProgram.categoryId,
+          userId: userId,
         };
-        await updateProgram(editingProgram.id, data, user);
+        if (
+          ability &&
+          ability.can(
+            "update",
+            subject("Program", { ...editingProgram } as PrismaProgram)
+          )
+        ) {
+          await updateProgram(editingProgram.id, data, user);
+        } else {
+          console.log("not have permission");
+          setError("You do not have permission to update this program.");
+        }
       } else {
         const endDate = new Date();
         const randomDays = Math.floor(Math.random() * 30) + 1;
         const airDate = new Date(endDate);
         airDate.setDate(airDate.getDate() - randomDays);
 
-        await createProgram({ ...newProgram, airDate }, user);
+        await createProgram({ ...newProgram, airDate, userId: user.id }, user);
       }
       programsData();
       // emitSocketEvent("programsUpdated");
@@ -235,13 +256,22 @@ console.log(user)
   };
 
   const handleDeleteProgram = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this program?")) {
+    const programToDelete = programs.find((program) => program.id === id);
+    if (
+      ability &&
+      ability.can(
+        "delete",
+        subject("Program", { ...programToDelete } as PrismaProgram)
+      ) &&
+      window.confirm("Are you sure you want to delete this program?")
+    ) {
       try {
-        await deleteProgram(id,user);
+        await deleteProgram(id, user);
         programsData();
         // socket.emit("programsUpdated");
       } catch (error) {
         console.error("Error deleting program:", error);
+        setError("You do not have permission to Delete this program.");
         setIsError(true);
       }
     }
@@ -410,30 +440,42 @@ console.log(user)
       showProgressBars: isRefetching,
       sorting,
     },
-    renderRowActions: ({ row, table }) => (
-      <Box sx={{ display: "flex", gap: "1rem" }}>
-        {ability.can("update", "Program") && (
-        <Tooltip title="Edit">
-          <IconButton onClick={() => handleOpenDialog(row.original)}>
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-          )}
-         {ability.can("delete", "Program") && ( 
-        <Tooltip title="Delete">
-          <IconButton
-            color="error"
-            onClick={() =>
-              row.original.id !== undefined &&
-              handleDeleteProgram(row.original.id)
-            }
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-         )} 
-      </Box>
-    ),
+    renderRowActions: ({ row, table }) => {
+      const ProgramToUpdate = row.original;
+      const ProgramToDelete = row.original;
+      return (
+        <Box sx={{ display: "flex", gap: "1rem" }}>
+          {ability &&
+            ability.can(
+              "update",
+              subject("Program", ProgramToUpdate as PrismaProgram)
+            ) && (
+              <Tooltip title="Edit">
+                <IconButton onClick={() => handleOpenDialog(row.original)}>
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          {ability &&
+            ability.can(
+              "delete",
+              subject("Program", ProgramToUpdate as PrismaProgram)
+            ) && (
+              <Tooltip title="Delete">
+                <IconButton
+                  color="error"
+                  onClick={() =>
+                    row.original.id !== undefined &&
+                    handleDeleteProgram(row.original.id)
+                  }
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+        </Box>
+      );
+    },
     renderTopToolbar: ({ table }) => (
       <Box
         sx={(theme) => ({
@@ -444,15 +486,15 @@ console.log(user)
           justifyContent: "space-between",
         })}
       >
-        {ability.can("create", "Program") && ( 
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-          startIcon={<AddIcon />}
-        >
-          Add Program
-        </Button>
+        {ability?.can("create", "Program") && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleOpenDialog()}
+            startIcon={<AddIcon />}
+          >
+            Add Program
+          </Button>
         )}
         <Box
           sx={{
@@ -485,114 +527,253 @@ console.log(user)
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Title"
-                variant="standard"
-                name="title"
-                value={newProgram.title || ""}
-                onChange={handleChange}
-                error={!!validationErrors?.title}
-                helperText={validationErrors?.title}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Duration"
-                variant="standard"
-                name="duration"
-                type="number"
-                value={newProgram.duration?.toString() || ""}
-                onChange={handleChange}
-                error={!!validationErrors?.duration}
-                helperText={validationErrors?.duration}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                variant="standard"
-                name="description"
-                value={newProgram.description || ""}
-                onChange={handleChange}
-                error={!!validationErrors?.description}
-                helperText={validationErrors?.description}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Video URL"
-                variant="standard"
-                name="videoUrl"
-                type="url"
-                value={newProgram.videoUrl || ""}
-                onChange={handleChange}
-                error={!!validationErrors?.videoUrl}
-                helperText={validationErrors?.videoUrl}
-              />
-            </Grid>
+            {editingProgram ? (
+              <>
+                {ability?.can("update", "Program", "title") && (
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Title"
+                      variant="standard"
+                      name="title"
+                      value={newProgram.title || ""}
+                      onChange={handleChange}
+                      error={!!validationErrors?.title}
+                      helperText={validationErrors?.title}
+                    />
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "duration") && (
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Duration"
+                      variant="standard"
+                      name="duration"
+                      type="number"
+                      value={newProgram.duration?.toString() || ""}
+                      onChange={handleChange}
+                      error={!!validationErrors?.duration}
+                      helperText={validationErrors?.duration}
+                    />
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "description") && (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      variant="standard"
+                      name="description"
+                      value={newProgram.description || ""}
+                      onChange={handleChange}
+                      error={!!validationErrors?.description}
+                      helperText={validationErrors?.description}
+                    />
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "videoUrl") && (
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Video URL"
+                      variant="standard"
+                      name="videoUrl"
+                      type="url"
+                      value={newProgram.videoUrl || ""}
+                      onChange={handleChange}
+                      error={!!validationErrors?.videoUrl}
+                      helperText={validationErrors?.videoUrl}
+                    />
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "channelId") && (
+                  <Grid item xs={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="channel-select-label">
+                        Channels
+                      </InputLabel>
+                      <Select
+                        labelId="channel-select-label"
+                        name="channelId"
+                        value={newProgram.channelId || ""}
+                        error={!!validationErrors?.channelId}
+                        onChange={handleSelectChange}
+                        label="Channels"
+                      >
+                        {channels.map((channel) => (
+                          <MenuItem key={channel.id} value={channel.id}>
+                            {channel.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "typeId") && (
+                  <Grid item xs={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="type-select-label">Types</InputLabel>
+                      <Select
+                        labelId="type-select-label"
+                        name="typeId"
+                        value={newProgram.typeId || ""}
+                        error={!!validationErrors?.typeId}
+                        onChange={handleSelectChange}
+                        label="Types"
+                      >
+                        {types.map((type) => (
+                          <MenuItem key={type.id} value={type.id}>
+                            {type.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+                {ability?.can("update", "Program", "categoryId") && (
+                  <Grid item xs={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="category-select-label">
+                        Categories
+                      </InputLabel>
+                      <Select
+                        labelId="category-select-label"
+                        name="categoryId"
+                        value={newProgram.categoryId || ""}
+                        error={!!validationErrors?.categoryId}
+                        onChange={handleSelectChange}
+                        label="Categories"
+                      >
+                        {categories.map((category) => (
+                          <MenuItem key={category.id} value={category.id}>
+                            {category.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+              </>
+            ) : (
+              <>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Title"
+                    variant="standard"
+                    name="title"
+                    value={newProgram.title || ""}
+                    onChange={handleChange}
+                    error={!!validationErrors?.title}
+                    helperText={validationErrors?.title}
+                  />
+                </Grid>
 
-            <Grid item xs={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="channel-select-label">Channels</InputLabel>
-                <Select
-                  labelId="channel-select-label"
-                  name="channelId"
-                  value={newProgram.channelId || ""}
-                  error={!!validationErrors?.channelId}
-                  onChange={handleSelectChange}
-                  label="Channels"
-                >
-                  {channels.map((channel) => (
-                    <MenuItem key={channel.id} value={channel.id}>
-                      {channel.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="type-select-label">Types</InputLabel>
-                <Select
-                  labelId="type-select-label"
-                  name="typeId"
-                  value={newProgram.typeId || ""}
-                  error={!!validationErrors?.typeId}
-                  onChange={handleSelectChange}
-                  label="Types"
-                >
-                  {types.map((type) => (
-                    <MenuItem key={type.id} value={type.id}>
-                      {type.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="category-select-label">Categories</InputLabel>
-                <Select
-                  labelId="category-select-label"
-                  name="categoryId"
-                  value={newProgram.categoryId || ""}
-                  error={!!validationErrors?.categoryId}
-                  onChange={handleSelectChange}
-                  label="Categories"
-                >
-                  {categories.map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Duration"
+                    variant="standard"
+                    name="duration"
+                    type="number"
+                    value={newProgram.duration?.toString() || ""}
+                    onChange={handleChange}
+                    error={!!validationErrors?.duration}
+                    helperText={validationErrors?.duration}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    variant="standard"
+                    name="description"
+                    value={newProgram.description || ""}
+                    onChange={handleChange}
+                    error={!!validationErrors?.description}
+                    helperText={validationErrors?.description}
+                  />
+                </Grid>
+
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Video URL"
+                    variant="standard"
+                    name="videoUrl"
+                    type="url"
+                    value={newProgram.videoUrl || ""}
+                    onChange={handleChange}
+                    error={!!validationErrors?.videoUrl}
+                    helperText={validationErrors?.videoUrl}
+                  />
+                </Grid>
+
+                <Grid item xs={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="channel-select-label">Channels</InputLabel>
+                    <Select
+                      labelId="channel-select-label"
+                      name="channelId"
+                      value={newProgram.channelId || ""}
+                      error={!!validationErrors?.channelId}
+                      onChange={handleSelectChange}
+                      label="Channels"
+                    >
+                      {channels.map((channel) => (
+                        <MenuItem key={channel.id} value={channel.id}>
+                          {channel.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="type-select-label">Types</InputLabel>
+                    <Select
+                      labelId="type-select-label"
+                      name="typeId"
+                      value={newProgram.typeId || ""}
+                      error={!!validationErrors?.typeId}
+                      onChange={handleSelectChange}
+                      label="Types"
+                    >
+                      {types.map((type) => (
+                        <MenuItem key={type.id} value={type.id}>
+                          {type.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="category-select-label">
+                      Categories
+                    </InputLabel>
+                    <Select
+                      labelId="category-select-label"
+                      name="categoryId"
+                      value={newProgram.categoryId || ""}
+                      error={!!validationErrors?.categoryId}
+                      onChange={handleSelectChange}
+                      label="Categories"
+                    >
+                      {categories.map((category) => (
+                        <MenuItem key={category.id} value={category.id}>
+                          {category.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

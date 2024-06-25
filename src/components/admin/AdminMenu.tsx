@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LiveTvIcon from "@mui/icons-material/LiveTv";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import { Box, Button } from "@mui/material";
 import Link from "next/link";
-import { defineAbilitiesFor } from "@/lib/abilities";
+import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
 import { useProgramsContext } from "@/context/ProgramsContext";
 import { UserWithRole } from "@/context/types";
 
@@ -16,7 +16,22 @@ function AdminMenu() {
   const { state } = useProgramsContext();
 
   const { user } = state;
-  const ability = defineAbilitiesFor(user as UserWithRole); 
+  // const ability = defineAbilitiesFor(user as UserWithRole); 
+
+  const [ability, setAbility] = useState<AppAbility | null>(null); 
+
+
+  useEffect(() => {
+    const fetchAbilities = async () => {
+      const fetchedAbility = await defineAbilitiesFor(user as UserWithRole);
+      setAbility(fetchedAbility); // Store the fetched ability in state
+    };
+
+    fetchAbilities();
+  }, [user]);
+
+  
+
 
   const buttonStyles = (path: string) => ({
     width: "100%",
@@ -60,7 +75,7 @@ function AdminMenu() {
             </Button>
           </Link>
         
-        {ability.can("read", "Channel") && (
+        {ability && ability.can("read", "Channel") && (
           <Link href="/channels" passHref>
             <Button
               variant="text"
@@ -82,7 +97,7 @@ function AdminMenu() {
             </Button>
           </Link>
         
-        {ability.can("read", "User") && (
+        {ability && ability.can("read", "User") && (
           <Link href="/users" passHref>
             <Button
               variant="text"
