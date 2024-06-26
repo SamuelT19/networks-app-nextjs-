@@ -104,7 +104,7 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
   useEffect(() => {
     const fetchAbilities = async () => {
       const fetchedAbility = await defineAbilitiesFor(user);
-      setAbility(fetchedAbility); // Store the fetched ability in state
+      setAbility(fetchedAbility);
     };
 
     fetchAbilities();
@@ -204,10 +204,8 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
       console.log(validationErrors);
       return;
     }
-    console.log(isSaving);
     setIsSaving(true);
     setIsError(false);
-    console.log(isSaving);
 
     try {
       if (editingProgram && editingProgram.id !== undefined) {
@@ -442,7 +440,6 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
     },
     renderRowActions: ({ row, table }) => {
       const ProgramToUpdate = row.original;
-      const ProgramToDelete = row.original;
       return (
         <Box sx={{ display: "flex", gap: "1rem" }}>
           {ability &&
@@ -785,7 +782,13 @@ const ProgramManagement: React.FC<ProgramManagementProps> = ({ user }) => {
             color="primary"
             disabled={isSaving}
           >
-            {isSaving ? "Saving..." : "Save"}
+            {editingProgram
+              ? isSaving
+                ? "Updating..."
+                : "Update"
+              : isSaving
+              ? "Adding..."
+              : "Add"}
           </Button>
         </DialogActions>
       </Dialog>

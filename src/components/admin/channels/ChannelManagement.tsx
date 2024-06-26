@@ -55,13 +55,6 @@ const channelSchema = z.object({
   userId: z.number().optional(),
 });
 
-type ChannelType = {
-  id: number;
-  name: string;
-  isActive: boolean | null;
-  userId: number | null;
-};
-
 interface ChannelManagementProps {
   user: UserWithRole;
 }
@@ -78,6 +71,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [rowCount, setRowCount] = useState(0);
 
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>(
@@ -161,6 +155,8 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
   };
   console.log(formData);
   const handleSubmit = async () => {
+    setIsSaving(true);
+    setIsError(false);
     try {
       channelSchema.parse(formData);
 
@@ -181,7 +177,7 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
           );
           channelsData();
         } else {
-          console.log("not have permission");
+          console.log("You do not have permission to update this channel.");
           setValidationError(
             "You do not have permission to update this channel."
           );
@@ -202,6 +198,8 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
       } else {
         console.error("Unexpected error:", error);
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -473,8 +471,14 @@ const ChannelManagement: React.FC<ChannelManagementProps> = ({ user }) => {
 
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit}>
-              {currentChannel ? "Update" : "Add"}
+            <Button onClick={handleSubmit} disabled={isSaving}>
+              {currentChannel
+                ? isSaving
+                  ? "Updating..."
+                  : "Update"
+                : isSaving
+                ? "Adding..."
+                : "Add"}
             </Button>
           </DialogActions>
         </Dialog>

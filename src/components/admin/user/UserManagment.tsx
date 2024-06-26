@@ -36,7 +36,6 @@ import {
 } from "@/server-actions/userActions";
 
 import { AppAbility, defineAbilitiesFor } from "@/lib/abilities";
-// import { User } from "@prisma/client";
 import { UserWithRole } from "@/context/types";
 import { getAllRoles } from "@/server-actions/roleActions";
 
@@ -58,12 +57,23 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [formData, setFormData] = useState<Partial<UserWithRole>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Setter[]>([]);
+  const [users, setUsers] = useState<UserWithRole[]>([]);
+
   const [ability, setAbility] = useState<AppAbility | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchAbilities = async () => {
       const fetchedAbility = await defineAbilitiesFor(user);
-      setAbility(fetchedAbility); 
+      setAbility(fetchedAbility);
     };
 
     fetchAbilities();
@@ -71,15 +81,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
   if (ability && !ability.can("manage", "all")) {
     return <div>Access Denied</div>;
   }
-
-  const [open, setOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [formData, setFormData] = useState<Partial<UserWithRole>>({});
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [roles, setRoles] = useState<Setter[]>([]);
-  const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [isError, setIsError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const fetchUserData = useCallback(async () => {
     setIsLoading(true);
@@ -101,7 +102,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
   console.log(users);
   useEffect(() => {
     fetchUserData();
-    
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -132,6 +132,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
   };
 
   const handleSubmit = async () => {
+    setIsSaving(true);
     try {
       const parsedData = userSchema.parse(formData);
 
@@ -148,6 +149,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
       } else {
         console.error("Unexpected error:", error);
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -180,6 +183,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
         accessorFn: (row) => row.role?.name || "",
         id: "roleId",
         header: "Role",
+        filterVariant: "multi-select",
       },
     ],
     []
@@ -193,7 +197,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
       showColumnFilters: true,
       showGlobalFilter: true,
     },
+    enableFacetedValues: true,
     enableRowActions: true,
+    enableColumnFilterModes: true,
     muiToolbarAlertBannerProps: isError
       ? {
           color: "error",
@@ -304,11 +310,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
             )}
           </DialogContent>
           <DialogActions>
+            {/* add here success or error message and add time out to the dialog to show the message*/}
             <Button onClick={handleClose} color="secondary">
               Cancel
             </Button>
             <Button onClick={handleSubmit} color="primary">
-              Save
+              {selectedUser
+                ? isSaving
+                  ? "Updating..."
+                  : "Update"
+                : isSaving
+                ? "Adding..."
+                : "Add"}
             </Button>
           </DialogActions>
         </Dialog>

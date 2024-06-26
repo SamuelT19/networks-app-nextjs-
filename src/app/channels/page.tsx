@@ -3,7 +3,7 @@
 import React from "react";
 import AdminNav from "@/components/admin/AdminNav";
 import AdminMenu from "@/components/admin/AdminMenu";
-import { Box, Container } from "@mui/material";
+import { Box } from "@mui/material";
 import ChannelManagement from "@/components/admin/channels/ChannelManagement";
 import { useRouter } from "next/navigation";
 import { useProgramsContext } from "@/context/ProgramsContext";

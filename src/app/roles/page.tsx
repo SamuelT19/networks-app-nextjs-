@@ -6,12 +6,12 @@ import AdminMenu from "@/components/admin/AdminMenu";
 import { Box } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useProgramsContext } from "@/context/ProgramsContext";
-import UserManagement from "@/components/admin/user/UserManagment";
 import RoleManagement from "@/components/admin/roles/RoleManagement";
-const User: React.FC = () => {
+const Channel: React.FC = () => {
   const { state } = useProgramsContext();
 
   const { user } = state;
+  console.log(user)
 
   const router = useRouter();
 
@@ -23,18 +23,16 @@ const User: React.FC = () => {
   return (
     <>
       <Box>
-        <AdminNav title="Users" />
+        <AdminNav title="Roles" />
       </Box>
       <Box sx={{ display: "flex" }}>
         <AdminMenu />
         <Box sx={{ flex: 1, margin: " 10px 30px" }}>
-          <Box sx={{display: "flex",flexDirection:"column", gap:"30px"}}>
-            <UserManagement user={user} />
-          </Box>
+          <RoleManagement/>
         </Box>
       </Box>
     </>
   );
 };
 
-export default User;
+export default Channel;

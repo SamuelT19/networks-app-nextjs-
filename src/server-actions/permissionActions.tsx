@@ -53,26 +53,27 @@ const updatePermission = async (id: number, data: PermissionData) => {
   }
 };
 
-// const deletePermission = async (roleId: number, permissionId: number) => {
-//   try {
-//     await prisma.permission.delete({
-//       where: {
-//         roleId_permissionId: {
-//           roleId: roleId,
-//           permissionId: permissionId,
-//         },
-//       },
-//     });
-//   } catch (error) {
-//     console.error(`Error deleting permission: ${(error as Error).message}`);
-//     throw new Error("Failed to delete permission");
-//   }
-// };
+const deletePermission = async (roleId: number, permissionId: number) => {
+  try {
+    await prisma.rolePermission.delete({
+      where: {
+        roleId_permissionId: {
+          roleId: roleId,
+          permissionId: permissionId,
+        },
+      },
+    });
+    console.log("role permission deleted")
+  } catch (error) {
+    console.error(`Error deleting permission: ${(error as Error).message}`);
+    throw new Error("Failed to delete permission");
+  }
+};
 
 export {
   createPermission,
   getAllPermissions,
   getPermissionById,
   updatePermission,
-  // deletePermission,
+  deletePermission,
 };
