@@ -93,15 +93,26 @@ function AdminMenu() {
           </Link>
         )}
         {ability?.can("manage", "all") && (
-          <Link href="/users" passHref>
-            <Button
-              variant="text"
-              startIcon={<MovieFilterIcon />}
-              sx={buttonStyles("/users")}
-            >
-              Users
-            </Button>
-          </Link>
+          <>
+            <Link href="/users" passHref>
+              <Button
+                variant="text"
+                startIcon={<MovieFilterIcon />}
+                sx={buttonStyles("/users")}
+              >
+                Users
+              </Button>
+            </Link>
+            <Link href="/roles" passHref>
+              <Button
+                variant="text"
+                startIcon={<MovieFilterIcon />}
+                sx={buttonStyles("/roles")}
+              >
+                Roles
+              </Button>
+            </Link>
+          </>
         )}
       </Box>
     </Box>

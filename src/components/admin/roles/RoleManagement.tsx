@@ -4,21 +4,20 @@ import {
   TextField,
   Button,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Checkbox,
   FormControlLabel,
+  Grid,
+  Paper,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { getAllPermissions, createRole } from "@/server-actions/userActions";
 import { Permission } from "@prisma/client";
-
 
 const RoleManagement = () => {
   const [name, setName] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -44,16 +43,18 @@ const RoleManagement = () => {
     }
   };
 
-  console.log(selectedPermissions);
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
       const permissionIds = selectedPermissions;
-      const response = await createRole(name, permissionIds);
-      console.log("Role created successfully:", response);
+      await createRole(name, permissionIds);
+      setSuccessMessage("Role created successfully");
+      setErrorMessage("");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error("Error creating role:", error);
+      setErrorMessage("Error creating role");
+      setSuccessMessage("");
+      setTimeout(() => setErrorMessage(""), 3000);
     }
   };
 
@@ -81,21 +82,15 @@ const RoleManagement = () => {
           required
         />
 
-        {/* Accordion for each subject */}
         {Object.keys(groupedPermissions).map((subject) => (
-          <Accordion
-            key={subject}
-            elevation={3}
-            style={{ marginBottom: "10px" }}
-          >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle1">{subject}</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <div style={{ width: "100%" }}>
-                {groupedPermissions[subject].map((permission) => (
+          <Paper elevation={3} style={{ marginBottom: "10px", padding: "10px" }} key={subject}>
+            <Typography variant="subtitle1" fontSize="24px">
+              {subject}
+            </Typography>
+            <Grid container spacing={2}>
+              {groupedPermissions[subject].map((permission) => (
+                <Grid item xs={12} sm={6} key={permission.id}>
                   <FormControlLabel
-                    key={permission.id}
                     control={
                       <Checkbox
                         checked={selectedPermissions.includes(permission.id)}
@@ -105,11 +100,14 @@ const RoleManagement = () => {
                     }
                     label={permission.name}
                   />
-                ))}
-              </div>
-            </AccordionDetails>
-          </Accordion>
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
         ))}
+
+        {successMessage && <Typography color="green" fontWeight="600">{successMessage}</Typography>}
+        {errorMessage && <Typography color="red" fontWeight="600">{errorMessage}</Typography>}
 
         <Button
           type="submit"

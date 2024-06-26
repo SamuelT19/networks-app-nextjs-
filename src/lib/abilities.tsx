@@ -1,5 +1,5 @@
 import Mustache from "mustache";
-import { User, Channel, Program, Prisma } from "@prisma/client";
+import { User, Channel, Program, Prisma, RolePermission } from "@prisma/client";
 import { AbilityBuilder, AbilityClass, FieldMatcher, PureAbility } from "@casl/ability";
 import { createPrismaAbility, PrismaQuery, Subjects } from "@casl/prisma";
 import { UserWithRole } from "@/context/types";
@@ -9,11 +9,11 @@ import { getUser } from "@/server-actions/userActions";
 export type AppAbility = PureAbility<
   [
     string,
-    "all" | Subjects<{ User: User; Channel: Channel; Program: Program }>
+    "all" | Subjects<{ User: User; Channel: Channel; Program: Program; RolePermission: RolePermission }>
   ],
   PrismaQuery
 >;
-type AppSubjects = "User" | "Channel" | "Program" | "all";
+type AppSubjects = "User" | "Channel" | "Program" | "RolePermission"| "all";
 
 export const AppAbility = PureAbility as AbilityClass<AppAbility>;
 
