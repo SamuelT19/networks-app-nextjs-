@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 const prisma = new PrismaClient();
+
+dotenv.config();
 
 const types = [
   { id: 1, name: "Live TV" },
@@ -24,10 +27,10 @@ const roles = [
 ];
 
 const users =[
-  {id:1, username:"Admin", email:"admin@admin.com", password:"admin"},
-  {id:2, username:"Editor", email:"editor@editor.com", password:"editor"},
-  {id:3, username:"Contributor", email:"contributor@contributor.com", password:"contributor"},
-  {id:4, username:"Viewer", email:"viewer@viewer.com", password:"viewer"},
+  {id:1, username:"Admin", email:"admin@admin.com", password:"admin",roleId:1},
+  {id:2, username:"Editor", email:"editor@editor.com", password:"editor",roleId:2},
+  {id:3, username:"Contributor", email:"contributor@contributor.com", password:"contributor",roleId:3},
+  {id:4, username:"Viewer", email:"viewer@viewer.com", password:"viewer",roleId:4},
 ]
 
 const permissions = [
@@ -148,23 +151,23 @@ const permissions = [
 ];
 
 async function main() {
-  console.log("Seeding types...");
-  for (const type of types) {
-    await prisma.type.upsert({
-      where: { id: type.id },
-      update: {},
-      create: type,
-    });
-  }
+  // console.log("Seeding types...");
+  // for (const type of types) {
+  //   await prisma.type.upsert({
+  //     where: { id: type.id },
+  //     update: {},
+  //     create: type,
+  //   });
+  // }
 
-  console.log("Seeding categories...");
-  for (const category of categories) {
-    await prisma.category.upsert({
-      where: { id: category.id },
-      update: {},
-      create: category,
-    });
-  }
+  // console.log("Seeding categories...");
+  // for (const category of categories) {
+  //   await prisma.category.upsert({
+  //     where: { id: category.id },
+  //     update: {},
+  //     create: category,
+  //   });
+  // }
 
   // console.log("Seeding roles...");
   // for (const role of roles) {
@@ -175,14 +178,14 @@ async function main() {
   //   });
   // }
 
-  console.log("Seeding permissions...");
-  for (const permission of permissions) {
-    await prisma.permission.upsert({
-      where: { id: permission.id },
-      update: {},
-      create: permission,
-    });
-  }
+  // console.log("Seeding permissions...");
+  // for (const permission of permissions) {
+  //   await prisma.permission.upsert({
+  //     where: { id: permission.id },
+  //     update: {},
+  //     create: permission,
+  //   });
+  // }
 
   console.log("Seeding users...");
   for (const user of users) {

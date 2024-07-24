@@ -47,25 +47,28 @@ const LoginForm: React.FC = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const router = useRouter();
 
   const onSubmit: SubmitHandler<FormData> = async () => {
     const { username, password } = getValues();
-    console.log(password);
     try {
       const { success, user } = await loginUser({ username, password });
       if (!success || !user) {
         setError("Invalid username or password");
         setTimeout(() => {
-          setError("");
+          setError(null);
         }, 1000);
       } else {
         setUserInLocalStorage(user, 24);
         dispatch({ type: "SET_USER", payload: user });
-        router.push("/dashboard");
+        setSuccess("Login successful!");
+        setTimeout(() => {
+          setSuccess(null);
+          router.push("/dashboard");
+        }, 2000);
       }
-      console.log(user);
     } catch (error) {
       console.error("Login failed:", error);
       setError("An error occurred during login");
@@ -93,8 +96,13 @@ const LoginForm: React.FC = () => {
         LOGIN
       </Typography>
       {error && (
-        <Typography variant="body2" color="error">
+        <Typography variant="body2" color="error" id="error" className="message">
           {error}
+        </Typography>
+      )}
+      {success && (
+        <Typography variant="body2" color="success" id="success" className="message">
+          {success}
         </Typography>
       )}
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -189,3 +197,4 @@ const LoginForm: React.FC = () => {
 };
 
 export default LoginForm;
+
